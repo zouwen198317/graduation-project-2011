@@ -1,10 +1,17 @@
-CC := gcc
-CFLAGS := -std=gnu99
+include ../Common.mk
+include Vars.mk
+
+all: $(EXECUTABLES)
 
 
-all: gpsParser
+%.o : %.c
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 
-gpsParser: test_gps_parser.o ../SRC/gps_parser.o
-	${CC} $^ -o $@
+%: test_%.o
+	cd ../SRC/; make $($@_DEP)
+	$(CC) $(CFLAGS) ../SRC/$($@_DEP) test_$@.o -o ../test_bin/$@
 
+
+clean:
+	rm -rf $(OBJECTS) ../SAMPLES/$(EXTRA) ../test_bin/*

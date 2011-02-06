@@ -1,18 +1,11 @@
-CC := gcc
-CFLAGS := -std=gnu99
-
-all: gps_parser.o test_gps_parser
+include Common.mk
 
 
-test_gps_parser: test_gps_parser.o gps_parser.o
-	${CC} $^ -o $@
+all:
+	cd SRC/ ; make
 
-test_gps_parser.o: test_gps_parser.c
-	${CC} ${CFLAGS} -c $< -o $@
+test_%:
+	cd test/ ; make $*
 
-gps_parser.o: gps_parser.c
-	${CC} ${CFLAGS} -c $< -o $@
-
-
-clean:
-	rm -rf *.o test_gps_parser
+clean: test_clean
+	cd SRC/ ; make clean
