@@ -2,7 +2,7 @@
 
 # Global Variables
 OBJECTS := test_gpsParser.o
-EXECUTABLES := test_gpsParser
+EXECUTABLES := gpsParser
 EXTRA := gps_sample.out
 
 # Dependencies
