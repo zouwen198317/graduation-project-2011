@@ -19,11 +19,18 @@
 #ifndef	GPS_PARSER_H
 #define GPS_PARSER_H
 
+/* Header files. */
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
+
+/* The GPSData data type is a structure to store GPS data.
+ * Where lat and lon represent the latitude and longitude respectively, with
+ * North and East taking positive values, and South and West taking negative
+ * values.
+ */
 typedef struct
 {
 	time_t	timeAndDate;
@@ -33,8 +40,26 @@ typedef struct
 	double	speed;
 } GPSData;
 
-GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer);
-char ** fieldsSperator( char * textString, char * fields[13]);
+/* Functions' Prototypes. */
 
+/* NMEARead function is data parser. It takes two parameters; The first is a
+ * pointer to character containing the data line to be parsed. The second
+ * parameter is a pointer to a GPSData data type. In addition, NMEARead converts
+ * the data to more suitable formats; It converts the longitude and latitude
+ * from degree to fractions, the time and date to time_t, and the speed from
+ * knots to km/h.
+ * Return values:
+ * 	+ If the string to parse does not start with "$GPRMC", or contains a
+ * 	  incorrect number of fields ( != 13 ), or even if the GPRMC line is
+ * 	  correct but data sent from GPS are invalid and the date and time
+ * 	  fields are of incorrect length, NMEARead returns a NULL pointer with
+ * 	  all the members of GPSDataPointer set to zero/false.
+ *	+ If the GPS data are invalid but time and date are of correct length,
+ *	  NMEARead returns a NULL pointer with the timeAndDate member of GPSData
+ *	  set to the time and date sent, and the valid member is set to false.
+ *	+ In case of data valid, NMEARead returns the GPSData pointer passed to
+ *	  it in the second parameter with all the members of GPSDataPointer set.
+ */
+GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer);
 
 #endif
