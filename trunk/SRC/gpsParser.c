@@ -33,7 +33,7 @@ GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 	char *		fields[13];
 
 	/* Initialization of GPSData struct. */
-	*GPSDataPointer = ( GPSData ) { 0, false, 0, 0, 0 };
+	*GPSDataPointer = ( GPSData ) { 0, false, 0, 0, 0, 0 };
 
 	/* Returning NULL, if data string is invalid. */
 	if( !__fieldsSeparator( NMEAstring, fields ) ||
@@ -89,6 +89,7 @@ GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 			atof( fields[ 5 ] + 3 ) / 60 ) *
 		( ( fields[ 6 ][ 0 ] == 'E' ) ? 1 : -1 );
 
+	GPSDataPointer->speedDirection = strtof( fields[ 8 ], (char **) NULL );
 	/* Speed is converted from knots to km/h by multiplying by 1.852 */
 	GPSDataPointer->speed = atof( fields[ 7 ] ) * 1.852 ;
 

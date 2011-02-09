@@ -38,6 +38,7 @@ typedef struct
 	double	lat;
 	double	lon;
 	double	speed;
+	float	speedDirection;
 } GPSData;
 
 /* Functions' Prototypes. */

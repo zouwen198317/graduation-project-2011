@@ -49,7 +49,7 @@ int main( int argc, char * argv[] )
 	printf( "File opened successfully.\n" );
 	printf( "Finding GPRMC lines and parsing data.\n" );
 
-	fprintf( outFile, "\tTime\t\t\tLatitude\tLongitude\tspeed.\n" );
+	fprintf( outFile, "\tTime\t\t\tLatitude\tLongitude\tSpeed\t\tDirection.\n" );
 	for( int lineCount = 0; fgets( textLine, 1024, nmeaFile ); lineCount++ )
 	{
 		char	*timeString;
@@ -60,9 +60,9 @@ int main( int argc, char * argv[] )
 		timeString[ strlen( timeString ) - 1 ] = '\0';
 
 		if( !gps.valid )
-			fprintf( outFile, "%s:\tN/A\t\tN/A\t\tN/A.\n", timeString );
+			fprintf( outFile, "%s:\tN/A\t\tN/A\t\tN/A\t\tN/A.\n", timeString );
 		else
-			fprintf( outFile, "%s:\t%lf\t%lf\t%f.\n", timeString, gps.lat, gps.lon, gps.speed );
+			fprintf( outFile, "%s:\t%lf\t%lf\t%lf\t%f.\n", timeString, gps.lat, gps.lon, gps.speed, gps.speedDirection );
 
 	}
 
