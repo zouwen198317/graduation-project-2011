@@ -1,3 +1,4 @@
+SHELL := /bin/sh
 CC := gcc
 CFLAGS := -std=gnu99
 
