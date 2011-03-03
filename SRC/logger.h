@@ -1,5 +1,5 @@
 /*
- * The GPS data grabber header file.
+ * The logger header file.
  * Copyright (C) 2011  Michael M. Behman (michael.behman@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,20 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GPSPROCESS_H_
-#define __GPSPROCESS_H_
+#ifndef __LOGGER_H_
+#define __LOGGER_H_
 
 /* Header files. */
-#include <termios.h>
 #include <string.h>
-#include <fcntl.h>
+#include <stdlib.h>
 #include <errno.h>
-//#include "logger.h"
 #include <unistd.h>
+#include <fcntl.h>
 
 
-/* Functions' prototypes. */
-void gpsProcess();
+
 
 
 #endif

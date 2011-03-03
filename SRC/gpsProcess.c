@@ -45,11 +45,12 @@ void gpsProcess()
 		 * Implement the logger.
 		 */
 //		LOG( strerror( errno ) );
+		perror(NULL); //remove
 		/* TODO:
 		 * Report error to display
 		 */
 		/* TODO:
-		 * Interupt instead of poll
+		 * Interrupt instead of poll
 		 */
 		sleep(1);
 	}
