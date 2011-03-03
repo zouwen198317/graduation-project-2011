@@ -22,6 +22,7 @@
 
 /* Definitions. */
 #define DEFAULT_LOG_FILE	"~/temp_log"
+#define FMODE			S_IFMT | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 /* global variables. */
 int	log_fd;
@@ -35,26 +36,35 @@ int log_init( char *fileName )
 		fileName = (char *) malloc( strlen(DEFAULT_LOG_FILE) );
 		fileName = DEFAULT_LOG_FILE;
 	}
-	if( ( log_fd = open( fileName, O_WRONLY ) ) < 0 )
+
+	if( ( log_fd = open( fileName, O_WRONLY | O_CREAT | O_APPEND, FMODE ) ) < 0 )
 	{
 		return errno;
 	}
 
-
-
+	return 0;
 }
 
-log_term()
+int log_term()
 {
-
-
-
+	int ret;
+	if( ( ret = close(log_fd) ) < 0 )
+	{
+//		log_write( "Error closing log", strerror( errno ) );
+		return errno;
+	}
+	return 0;
 }
 
 
-log_write()
+int log_write( char *title, char *msg )
 {
-
-
+	time_t timeNow = time( NULL );
+	char *timeText = ctime( &timeNow );
+	timeText[ strlen( timeText ) -1 ] = '\0';
+	int msgSize = strlen( msg ) + strlen( title ) + strlen( timeText ) + 6;
+	char *buff = (char *) malloc( msgSize );
+	sprintf( buff, "%s: %s: %s\n", timeText, title, msg );
+	write( log_fd, buff, msgSize );
 
 }

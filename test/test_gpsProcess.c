@@ -16,11 +16,57 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+/* Header files. */
 #include "../SRC/gpsProcess.h"
+#include "../SRC/logger.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <string.h>
 
+
+/* Definitions. */
+#define LOGFILE		"extra/gpsProcessTestLog"
+/* Macros. */
+#define LOG( x )	log_write( "gpsProcess test", x )
+
+
+/* Functions. */
 int main()
 {
-	gpsProcess();
-	return 0;
+	int ret;
+	pid_t cpid;
+	if( ret = log_init( LOGFILE ) )
+	{
+		printf( strerror( ret ) );
+		exit( EXIT_FAILURE );
+	}
+	
+	cpid = fork();
+	if( cpid < 0 )
+	{
+		LOG( "Process failed to fork, quiting." );
+		log_term();
+		exit( EXIT_FAILURE );
+	}
+	if( !cpid )
+	{
+		LOG( "Process forked successfully, running gpsProcess from child." );
+		gpsProcess();
+		LOG( "gpsProcess terminated." );
+		exit( EXIT_SUCCESS );
+	}
+	else
+	{
+		LOG( "Parent process will sleep for 30 seconds." );
+		sleep( 30 );
+		LOG( "Parent woke up. Will terminate child now." );
+		kill( cpid, SIGTERM );
+	}
+	LOG( "Waiting for child to terminate." );
+	waitpid( cpid, NULL, 0 );
+	LOG( "Closing log file." );
+	log_term();
+
+	return EXIT_SUCCESS;
 }

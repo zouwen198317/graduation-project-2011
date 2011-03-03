@@ -25,9 +25,15 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <time.h>
 
 
-
+/* Functions' prototypes. */
+int log_init( char *LogFileName );
+int log_term();
+int log_write( char *title, char *msg );
 
 
 #endif
