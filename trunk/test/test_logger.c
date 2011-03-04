@@ -31,6 +31,7 @@ int main()
 {
 	int ret;
 
+	LOG( "Pre-initialization logging." );
 	if( ret = log_init( LOGFILENAME ) )
 	{
 		printf("Error opening log file: %s\n", strerror( ret ) );
@@ -49,6 +50,7 @@ int main()
 		printf( "Error closing log: %s\n", strerror( ret ) );
 	}
 	printf( "Log file closed successfully.\n");
+	LOG( "Post-initialization logging." );
 	return 0;
 }
 
