@@ -25,8 +25,7 @@
 #define FMODE			S_IFMT | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 /* global variables. */
-int	log_fd;
-
+int	log_fd = 0;
 
 /* Functions. */
 int log_init( char *fileName )
@@ -53,7 +52,7 @@ int log_term()
 //		log_write( "Error closing log", strerror( errno ) );
 		return errno;
 	}
-	return 0;
+	return log_fd=0;
 }
 
 
@@ -65,6 +64,6 @@ int log_write( char *title, char *msg )
 	int msgSize = strlen( msg ) + strlen( title ) + strlen( timeText ) + 6;
 	char *buff = (char *) malloc( msgSize );
 	sprintf( buff, "%s: %s: %s\n", timeText, title, msg );
-	write( log_fd, buff, msgSize );
+	write( ( log_fd > 0 ) ? log_fd : STDERR_FILENO, buff, msgSize );
 
 }

@@ -1,6 +1,5 @@
 include Common.mk
 
-
 all:
 	cd SRC/ ; make
 

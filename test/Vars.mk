@@ -1,4 +1,8 @@
 # Makefile variables file for test codes
+# Paths
+BIN_PATH := ..\/test_bin\/
+EXTRA_PATH := ..\/test_bin\/extra\/
+SRC_PATH := ..\/SRC\/
 
 # Global Variables
 OBJECTS := test_gpsParser.o test_gpsProcess.o test_logger.o
