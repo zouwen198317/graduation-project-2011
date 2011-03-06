@@ -10,8 +10,8 @@ all: $(EXECUTABLES)
 
 
 %: test_%.o
-	cd $(SRC_PATH); make $($@_DEP)
-	$(CC) $(CFLAGS) $(call path_multiplier,$(SRC_PATH),$($@_DEP)) test_$@.o -o $(BIN_PATH)$@
+	cd $(SRC_PATH); make $($*_DEP)
+	$(CC) $(CFLAGS) $(call path_multiplier,$(SRC_PATH),$($*_DEP)) test_$*.o -o $(BIN_PATH)$@
 
 
 clean:
