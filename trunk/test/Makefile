@@ -10,9 +10,9 @@ all: $(EXECUTABLES)
 
 
 %: test_%.o
-	cd $(SRC_PATH); make $($*_DEP)
+	cd $(SRC_PATH); $(MAKE) $(MFLAGS) $($*_DEP)
 	$(CC) $(CFLAGS) $(call path_multiplier,$(SRC_PATH),$($*_DEP)) test_$*.o -o $(BIN_PATH)$@
 
 
 clean:
-	rm -rf $(OBJECTS) $(call path_multiplier,$(EXTRA_PATH),$(EXTRA)) $(call path_multiplier,$(BIN_PATH),$(EXECUTABLES))
+	$(RM) $(OBJECTS) $(call path_multiplier,$(EXTRA_PATH),$(EXTRA)) $(call path_multiplier,$(BIN_PATH),$(EXECUTABLES))
