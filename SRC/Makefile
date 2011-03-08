@@ -6,13 +6,16 @@ all: $(EXECUTABLES)
 
 
 %.o: %.c %.h
-	${CC} ${CFLAGS} -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
+starter.o: starter.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-%: %.o $(%_DEP)
+%: %.o
+	$(MAKE) $(MFLAGS) $($*_DEP)
 	$(CC) $(CFLAGS) $($*_DEP) $*.o -o $(BIN_PATH)$@
 
 %: %.c
 
 clean:
-	rm -rf $(OBJECTS) $(call path_multiplier,$(EXTRA_PATH),$(EXTRA)) $(call path_multiplier,$(BIN_PATH),$(EXECUTABLES))
+	$(RM) $(OBJECTS) $(call path_multiplier,$(EXTRA_PATH),$(EXTRA)) $(call path_multiplier,$(BIN_PATH),$(EXECUTABLES))

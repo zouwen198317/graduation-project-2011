@@ -1,10 +1,10 @@
 include Common.mk
 
 all:
-	cd SRC/ ; make
+	cd SRC/ ; $(MAKE) $(MFLAGS)
 
 test_%:
-	cd test/ ; make $*
+	cd test/ ; $(MAKE) $(MFLAGS) $*
 
 clean: test_clean
-	cd SRC/ ; make clean
+	cd SRC/ ; $(MAKE) $(MFLAGS) clean
