@@ -6,5 +6,8 @@ all:
 test_%:
 	cd test/ ; $(MAKE) $(MFLAGS) $*
 
+%:
+	cd SRC/; $(MAKE) $(MFLAGS) $*
+
 clean: test_clean
 	cd SRC/ ; $(MAKE) $(MFLAGS) clean
