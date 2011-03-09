@@ -3,7 +3,7 @@ CC := gcc
 CFLAGS := -std=gnu99
 
 ifeq "$(DEBUG)" "on"
-CFLAGS += -g -Wall
+	CFLAGS += -g -Wall
 endif
 
 .PHONY: all clean
