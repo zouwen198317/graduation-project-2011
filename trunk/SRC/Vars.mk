@@ -10,3 +10,4 @@ EXTRA := Logfile
 
 # Dependencies
 starter_DEP := $(OBJECTS)
+gpsProcess_DEP := logger.o gpsParser.o
