@@ -8,4 +8,6 @@ endif
 
 .PHONY: all clean
 
+#Functions
 path_multiplier = `echo $(2) | sed 's/\ /\ $(1)/g' | sed 's/^/$(1)/g'`
+uniq = $(shell echo $(1) | sed 's/\ /\n/g' | sort -u | tr '\n' ' ')

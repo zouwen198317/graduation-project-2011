@@ -1,4 +1,5 @@
 include ../Common.mk
+include ../SRC/Vars.mk
 include Vars.mk
 
 
@@ -11,7 +12,7 @@ all: $(EXECUTABLES)
 
 %: test_%.o
 	cd $(SRC_PATH); $(MAKE) $(MFLAGS) $($*_DEP)
-	$(CC) $(CFLAGS) $(call path_multiplier,$(SRC_PATH),$($*_DEP)) test_$*.o -o $(BIN_PATH)$@
+	$(CC) $(CFLAGS) $(call uniq,$(call path_multiplier,$(SRC_PATH),$($*_DEP)) $(call path_multiplier,$(SRC_PATH),$(foreach var,$(patsubst %.o,%_DEP,$($*_DEP)),$($(var))))) test_$*.o -o $(BIN_PATH)$@
 
 
 clean:

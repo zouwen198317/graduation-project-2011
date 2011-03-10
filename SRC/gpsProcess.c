@@ -20,7 +20,7 @@
 #include "gpsProcess.h"
 
 /* TODO: remove: */
-#include<stdio.h>
+//#include<stdio.h>
 
 
 /* Definitions. */
@@ -29,7 +29,7 @@
 
 
 /* Marcros. */
-#define LOG( x )	errlog( "GPS Process", x )
+#define LOG( x )	log_write( "GPS Process", x )
 
 /* Functions. */
 
@@ -41,11 +41,7 @@ void gpsProcess()
 
 	while( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
 	{
-		/* TODO:
-		 * Implement the logger.
-		 */
-//		LOG( strerror( errno ) );
-		perror(NULL); //remove
+		LOG( strerror( errno ) );
 		/* TODO:
 		 * Report error to display
 		 */
@@ -54,6 +50,10 @@ void gpsProcess()
 		 */
 		sleep(1);
 	}
+
+	/* TODO:
+	 * Mask term signal.
+	 */
 
 	tcgetattr( gps_fd, &oldTerm );
 	bzero( &newTerm, sizeof( newTerm ) );
@@ -66,9 +66,15 @@ void gpsProcess()
 
 	while(1)
 	{
+		GPSData parsedData;
 		count = read( gps_fd, buff, 255 );
 		buff[ count ] = '\0';
-		printf( "%s\n", buff );
+//		printf( "%s\n", buff );
+		if( NMEARead( buff, &parsedData ) )
+		{
+
+
+		}
 	}
 
 	/* TODO:

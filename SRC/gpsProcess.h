@@ -24,9 +24,9 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-//#include "logger.h"
+#include "logger.h"
 #include <unistd.h>
-
+#include "gpsParser.h"
 
 /* Functions' prototypes. */
 void gpsProcess();
