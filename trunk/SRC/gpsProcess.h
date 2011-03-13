@@ -29,6 +29,11 @@
 #include "gpsParser.h"
 
 /* Functions' prototypes. */
+/* gpsProcess:
+ * This is the function that does the gps process task; it opens the gps device
+ * file, starts reading data, parses the data, and send them to the display (if
+ * found) and to the server over the network.
+ */
 void gpsProcess();
 
 

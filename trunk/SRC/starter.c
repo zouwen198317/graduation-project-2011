@@ -43,24 +43,36 @@ int main()
 
 
 	/* Initializing the logger. */
+	ret = log_init( LOGFILE ) 
 	LOG( "Initializing the log." );
-	if( ret = log_init( LOGFILE ) )
+	/* If log wasn't initialized successfully. */
+	if( ret )
 		LOG( strerror( ret ) );
 	
+	/* Starting the forking phase. */
 	pid_gps = fork();
 	if( pid_gps < 0 )
 	{
+		/* Error in forking. */
 		LOG( "Process failed to fork, quiting." );
 		log_term();
 		exit( EXIT_FAILURE );
 	}
 	if( !pid_gps )
 	{
+		/* Fork() succeeded, Child process.
+		 * GPS Process.
+		 */
 		LOG( "Process forked successfully, running gpsProcess from child." );
+		/* Starting gpsProcess. */
 		gpsProcess();
+		/* Process exited. */
+		/* TODO: not supposed to get back here. */
 		LOG( "gpsProcess terminated." );
 		exit( EXIT_SUCCESS );
 	}
+	/* Parent Process. */
+
 
 	LOG( "Parent process will sleep for 30 seconds." );
 	sleep( 30 );

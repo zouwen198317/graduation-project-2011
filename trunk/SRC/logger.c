@@ -28,42 +28,68 @@
 int	log_fd = 0;
 
 /* Functions. */
+/* log_init: log initialization function. */
 int log_init( char *fileName )
 {
+	/* Make sure that logger wasn't already initiated. Otherwise, return
+	 * EMFILE (Error, too many opened files.).
+	 */
+	if( log_fd )
+		return EMFILE;
+
+	/* If a NULL pointer is sent in filename, the default file is used. */
 	if( fileName == NULL )
 	{
 		fileName = (char *) malloc( strlen(DEFAULT_LOG_FILE) );
 		fileName = DEFAULT_LOG_FILE;
 	}
 
+	/* Opening the log file for writing. Append if existant and create if
+	 * non-existant. File is created with permissions 644.
+	 */
 	if( ( log_fd = open( fileName, O_WRONLY | O_CREAT | O_APPEND, FMODE ) ) < 0 )
 	{
+		/* In case of error, return errno. */
 		return errno;
 	}
 
+	/* Initialization succeeded. */
 	return 0;
 }
 
+/* log_term: terminates the logging. */
 int log_term()
 {
-	int ret;
-	if( ( ret = close(log_fd) ) < 0 )
+	if( log_fd < 1 )
+		return ENOTSUP;
+
+	/* Closing log file. On error, return errno. */
+	if( close(log_fd) < 0 )
 	{
 //		log_write( "Error closing log", strerror( errno ) );
 		return errno;
 	}
-	return log_fd=0;
+
+	/* Operation succeeded. */
+	return log_fd = 0;
 }
 
-
+/* log_write: log data. */
 int log_write( char *title, char *msg )
 {
+	/* Get current time. */
 	time_t timeNow = time( NULL );
 	char *timeText = ctime( &timeNow );
 	timeText[ strlen( timeText ) -1 ] = '\0';
+	/* Calculate message size. */
 	int msgSize = strlen( msg ) + strlen( title ) + strlen( timeText ) + 6;
+	/* Allocate memory for the message to be printed. */
 	char *buff = (char *) malloc( msgSize );
+	/* Creating message. */
 	sprintf( buff, "%s: %s: %s\n", timeText, title, msg );
+	/* Writing data to log file. */
 	write( ( log_fd > 0 ) ? log_fd : STDERR_FILENO, buff, msgSize );
+	/* Freeing allocated memory. */
+	free( buff );
 
 }
