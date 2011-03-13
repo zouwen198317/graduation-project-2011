@@ -39,8 +39,10 @@ void gpsProcess()
 	struct termios oldTerm, newTerm;
 	char buff[ 255 ];
 
+	/* Opening GPS device (serial terminal) for reading. */
 	while( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
 	{
+		/* Error opening the device file. */
 		LOG( strerror( errno ) );
 		/* TODO:
 		 * Report error to display
@@ -55,21 +57,32 @@ void gpsProcess()
 	 * Mask term signal.
 	 */
 
+
+	/* Storing old terminal settings. */
 	tcgetattr( gps_fd, &oldTerm );
+	/* Defining the serial terminal setups:
+	 * using canonical synchronous mode.
+	 */
 	bzero( &newTerm, sizeof( newTerm ) );
 	newTerm.c_cflag = BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
 	newTerm.c_iflag = IGNPAR;
 	newTerm.c_oflag = 0;
 	newTerm.c_lflag = ICANON;
+	/* Flush any garbage in the device. */
 	tcflush( gps_fd, TCIFLUSH );
+	/* Apply the new terminal settings. */
 	tcsetattr( gps_fd, TCSANOW, &newTerm );
 
+	/* Data fetching loop. */
 	while(1)
 	{
 		GPSData parsedData;
+
+		/* Reading data from device. */
 		count = read( gps_fd, buff, 255 );
 		buff[ count ] = '\0';
 //		printf( "%s\n", buff );
+		/* Parsing the data fetched. */
 		if( NMEARead( buff, &parsedData ) )
 		{
 
