@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <time.h>
-
+#include <alloca.h>
 
 /* Functions' prototypes. */
 /* log_init:

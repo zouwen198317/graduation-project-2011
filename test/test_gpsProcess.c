@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 #include <string.h>
 
 
@@ -36,7 +38,7 @@ int main()
 {
 	int ret;
 	pid_t cpid;
-	if( ret = log_init( LOGFILE ) )
+	if( ( ret = log_init( LOGFILE ) ) )
 	{
 		printf( strerror( ret ) );
 		exit( EXIT_FAILURE );

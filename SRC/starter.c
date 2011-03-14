@@ -43,7 +43,7 @@ int main()
 
 
 	/* Initializing the logger. */
-	ret = log_init( LOGFILE ) 
+	ret = log_init( LOGFILE );
 	LOG( "Initializing the log." );
 	/* If log wasn't initialized successfully. */
 	if( ret )

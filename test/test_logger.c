@@ -32,7 +32,7 @@ int main()
 	int ret;
 
 	LOG( "Pre-initialization logging." );
-	if( ret = log_init( LOGFILENAME ) )
+	if( ( ret = log_init( LOGFILENAME ) ) )
 	{
 		printf("Error opening log file: %s\n", strerror( ret ) );
 		exit( EXIT_FAILURE );
@@ -44,7 +44,7 @@ int main()
 	printf("Logs written.\n");
 	LOG( "Closing log." );
 
-	if( ret = log_term() )
+	if( ( ret = log_term() ) )
 	{
 		LOG( "Cannot close log." );
 		printf( "Error closing log: %s\n", strerror( ret ) );
