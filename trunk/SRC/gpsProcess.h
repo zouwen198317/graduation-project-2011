@@ -27,6 +27,7 @@
 #include "logger.h"
 #include <unistd.h>
 #include "gpsParser.h"
+#include <signal.h>
 
 /* Functions' prototypes. */
 /* gpsProcess:

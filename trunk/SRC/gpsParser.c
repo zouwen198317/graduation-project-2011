@@ -26,9 +26,8 @@ char ** __fieldsSeparator( char * textString, char * fields[13]);
 /* Functions' Implementation. */
 
 /* NMEARead (explained in the header file.) */
-GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
+int NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 {
-	char *		tempChar = NMEAstring;
 	struct tm	timestruct;
 	char *		fields[13];
 
@@ -41,7 +40,7 @@ GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 			( fields[ 2 ][ 0 ] != 'A' &&
 			  ( strlen( fields[ 1 ] ) != 10 ||
 			    strlen( fields[ 9 ] ) != 6 ) ) )
-		return NULL;
+		return E_GPARS_INVDATA;
 
 	/* Parsing time and date.
 	 * The time is stored in field 1 while the date is stored in field9.
@@ -73,7 +72,7 @@ GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 	 * date set in GPSDataPointer.
 	 */
 	if( fields[2][0] != 'A' )
-		return NULL;
+		return E_GPARS_NOTCON;
 
 	GPSDataPointer->valid = true;
 
@@ -93,7 +92,7 @@ GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer)
 	/* Speed is converted from knots to km/h by multiplying by 1.852 */
 	GPSDataPointer->speed = atof( fields[ 7 ] ) * 1.852 ;
 
-	return GPSDataPointer;
+	return 0;
 	
 }
 

@@ -25,6 +25,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+/* Definitions. */
+/* Error codes. */
+#define		E_GPARS_INVDATA		-1
+#define		E_GPARS_NOTCON		-2
 
 /* The GPSData data type is a structure to store GPS data.
  * Where lat and lon represent the latitude and longitude respectively, with
@@ -53,14 +57,11 @@ typedef struct
  * 	+ If the string to parse does not start with "$GPRMC", or contains a
  * 	  incorrect number of fields ( != 13 ), or even if the GPRMC line is
  * 	  correct but data sent from GPS are invalid and the date and time
- * 	  fields are of incorrect length, NMEARead returns a NULL pointer with
- * 	  all the members of GPSDataPointer set to zero/false.
+ * 	  fields are of incorrect length, NMEARead returns E_GPARS_INVDATA.
  *	+ If the GPS data are invalid but time and date are of correct length,
- *	  NMEARead returns a NULL pointer with the timeAndDate member of GPSData
- *	  set to the time and date sent, and the valid member is set to false.
- *	+ In case of data valid, NMEARead returns the GPSData pointer passed to
- *	  it in the second parameter with all the members of GPSDataPointer set.
+ *	  NMEARead returns E_GPARS_NOTCON.
+ *	+ In case of data valid, NMEARead returns zero.
  */
-GPSData * NMEARead( char * NMEAstring, GPSData * GPSDataPointer);
+int NMEARead( char * NMEAstring, GPSData * GPSDataPointer);
 
 #endif

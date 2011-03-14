@@ -40,7 +40,7 @@ int log_init( char *fileName )
 	/* If a NULL pointer is sent in filename, the default file is used. */
 	if( fileName == NULL )
 	{
-		fileName = (char *) malloc( strlen(DEFAULT_LOG_FILE) );
+		fileName = (char *) alloca( strlen(DEFAULT_LOG_FILE) );
 		fileName = DEFAULT_LOG_FILE;
 	}
 
@@ -66,7 +66,7 @@ int log_term()
 	/* Closing log file. On error, return errno. */
 	if( close(log_fd) < 0 )
 	{
-//		log_write( "Error closing log", strerror( errno ) );
+		log_write( "Error closing log", strerror( errno ) );
 		return errno;
 	}
 
@@ -86,10 +86,10 @@ int log_write( char *title, char *msg )
 	/* Allocate memory for the message to be printed. */
 	char *buff = (char *) malloc( msgSize );
 	/* Creating message. */
-	sprintf( buff, "%s: %s: %s\n", timeText, title, msg );
+	snprintf( buff, msgSize, "%s: %s: %s\n", timeText, title, msg );
 	/* Writing data to log file. */
 	write( ( log_fd > 0 ) ? log_fd : STDERR_FILENO, buff, msgSize );
 	/* Freeing allocated memory. */
 	free( buff );
-
+	return 0;
 }

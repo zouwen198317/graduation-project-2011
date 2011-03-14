@@ -20,7 +20,7 @@
 #include "gpsProcess.h"
 
 /* TODO: remove: */
-//#include<stdio.h>
+#include<stdio.h>
 
 
 /* Definitions. */
@@ -31,13 +31,33 @@
 /* Marcros. */
 #define LOG( x )	log_write( "GPS Process", x )
 
+/* Function prototypes. */
+static void termHandle( int signum, siginfo_t *siginfo, void *context );
+
+
+/* Global variables. */
+int			gps_fd = 0;
+struct termios		oldTerm;
+
+
 /* Functions. */
 
 void gpsProcess()
 {
-	register int gps_fd, count;
-	struct termios oldTerm, newTerm;
+	register int count;
+	struct termios newTerm;
 	char buff[ 255 ];
+	struct sigaction sig_handler;
+
+
+	/* Masking SIGTERM. */
+	sig_handler.sa_sigaction = &termHandle;
+	sigemptyset( &sig_handler.sa_mask );
+	sig_handler.sa_flags = SA_SIGINFO;
+	if( ( sigaction( SIGTERM, &sig_handler, NULL ) ) < 0 )
+		LOG( "W:Failed to mask SIGTERM. Expecting a messy termination.\n" );
+	else
+		LOG( "SIGTERM mask is set." );
 
 	/* Opening GPS device (serial terminal) for reading. */
 	while( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
@@ -53,11 +73,6 @@ void gpsProcess()
 		sleep(1);
 	}
 
-	/* TODO:
-	 * Mask term signal.
-	 */
-
-
 	/* Storing old terminal settings. */
 	tcgetattr( gps_fd, &oldTerm );
 	/* Defining the serial terminal setups:
@@ -72,6 +87,7 @@ void gpsProcess()
 	tcflush( gps_fd, TCIFLUSH );
 	/* Apply the new terminal settings. */
 	tcsetattr( gps_fd, TCSANOW, &newTerm );
+	LOG( "Serial terminal is configured. Starting to fetch data." );
 
 	/* Data fetching loop. */
 	while(1)
@@ -81,19 +97,34 @@ void gpsProcess()
 		/* Reading data from device. */
 		count = read( gps_fd, buff, 255 );
 		buff[ count ] = '\0';
-//		printf( "%s\n", buff );
-		/* Parsing the data fetched. */
-		if( NMEARead( buff, &parsedData ) )
+		/* Parsing the valid data, and drop the invalid. */
+		if( !NMEARead( buff, &parsedData ) )
 		{
-
-
+			/* TODO: Remove: */
+			char	*timeString;
+			timeString = ctime(&(parsedData.timeAndDate));
+			timeString[ strlen( timeString ) - 1 ] = '\0';
+			printf( "%s:\t%lf\t%lf\t%lf\t%f.\n", timeString, parsedData.lat, parsedData.lon, parsedData.speed, parsedData.speedDirection );
+			/* TODO: send over the network. */
+			/* TODO: send to display if there's any. */
 		}
 	}
 
-	/* TODO:
-	 * The cleanup code should be in an interupt handler.
-	 */
-	tcsetattr( gps_fd, TCSANOW, &oldTerm );
+	/* Execution should never reach here. */
+	LOG( "E: Out of the fetching loop. Calling termHandle() to exit." );
+	termHandle( 0, NULL, NULL );
 
 }
 
+static void termHandle( int signum, siginfo_t *siginfo, void *context )
+{
+	LOG( "Caught SIGTERM." );
+	if( gps_fd > 0 )
+	{
+		LOG( "Restoring old settings and cleanning." );
+		tcsetattr( gps_fd, TCSANOW, &oldTerm );
+		close( gps_fd );
+	}
+	LOG( "EXITING gpsProcess." );
+	exit( EXIT_SUCCESS );
+}
