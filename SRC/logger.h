@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <alloca.h>
+#include <stdarg.h>
 
 /* Functions' prototypes. */
 /* log_init:
@@ -53,13 +54,15 @@ int log_init( char *LogFileName );
 int log_term();
 
 /* log_write:
- * This is the logging function. It has two parameters; The first is a pointer
- * to character that points to message title, and the second is a pointer to
- * character that points to the message text.
+ * This is the logging function. It has three or more parameters; The first is
+ * a pointer to character that points to the message title, the second is the
+ * priority of the message, and the third is va_list of pointers to character
+ * that point to the message text.
+ * NOTE: the last pointer to character in the arguments list must be NULL.
  * If log_write was called without the logger being initialized, it prints its
  * log message to FILENO_STDERR.
  */
-int log_write( char *title, char *msg );
+int log_write( char *title, ...);
 
 
 #endif

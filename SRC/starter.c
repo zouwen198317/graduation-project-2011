@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /* Header files. */
 #include "gpsProcess.h"
 #include "logger.h"
@@ -25,21 +26,50 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <errno.h>
+/* End of Header files. */
 
 
 /* Definitions. */
-#define LOGFILE		"Logfile"
+/* LOG definitions. */
+#define LOGFILE				"Logfile"
+/* Processes definitions. */
+#define	PROC_NUM			2
+#define PROC_GPS			0
+/* End of Definitions. */
+
 
 /* Macros. */
-#define LOG( x )	log_write( "Main parent", x )
+/* LOG macros. */
+#define RAW_LOG( x, ...) 		log_write( x, __VA_ARGS__, NULL )
+#define LOG( ... ) 			log_write( "Main parent", __VA_ARGS__, NULL )
+/* procID translator macros. */
+#define procID2Name( PROC_GPS )		"GPS Process"
+/* processes translator macros. */
+#define execProc( PROC_GPS )		gpsProcess()
+/* End of Macros. */
 
+
+/* Functions' prototypes. */
+/* TODO: Inlining. */
+inline void forkAndExec( int proc );
+inline void cleanAndExit( int status );
+inline void killAll();
+static void childDied( int signum, siginfo_t *siginfo, void *context );
+/* End of Functions' prototypes. */
+
+
+/* Global variables. */
+int processesDB[ PROC_NUM ];
+int processesCount = 0;
+/* End of Global variables. */
 
 
 /* Functions. */
 int main()
 {
 	int ret;
-	pid_t pid_gps; /* Children processes PIDs. */
+	struct sigaction sigHandle;
 
 
 	/* Initializing the logger. */
@@ -48,41 +78,110 @@ int main()
 	/* If log wasn't initialized successfully. */
 	if( ret )
 		LOG( strerror( ret ) );
-	
-	/* Starting the forking phase. */
-	pid_gps = fork();
-	if( pid_gps < 0 )
-	{
-		/* Error in forking. */
-		LOG( "Process failed to fork, quiting." );
-		log_term();
-		exit( EXIT_FAILURE );
-	}
-	if( !pid_gps )
-	{
-		/* Fork() succeeded, Child process.
-		 * GPS Process.
-		 */
-		LOG( "Process forked successfully, running gpsProcess from child." );
-		/* Starting gpsProcess. */
-		gpsProcess();
-		/* Process exited. */
-		/* TODO: not supposed to get back here. */
-		LOG( "gpsProcess terminated." );
-		exit( EXIT_SUCCESS );
-	}
-	/* Parent Process. */
 
+	/* Initializing processesDB. */
+	memset( processesDB, 0, sizeof( int ) * PROC_NUM );
+
+	LOG( "Masking signals." );
+	/* Masking signals. */
+	/* SIGCHLD. */
+	sigHandle.sa_sigaction = &childDied;
+	sigemptyset( &sigHandle.sa_mask );
+	sigHandle.sa_flags = SA_SIGINFO;
+	if( ( sigaction( SIGCHLD, &sigHandle, NULL ) ) < 0 )
+		LOG( "W: Failed to mask SIGCHLD. Expecting messy behaviour." );
+	else
+		LOG( "SIGCHLD mask set." );
+
+
+	/* Starting the forking phase. */
+	/* Forking GPS process. */
+	forkAndExec( PROC_GPS );
 
 	LOG( "Parent process will sleep for 30 seconds." );
 	sleep( 30 );
-	LOG( "Parent woke up. Will terminate child now." );
-	kill( pid_gps, SIGTERM );
-	LOG( "Waiting for child to terminate." );
-	waitpid( pid_gps, NULL, 0 );
-	LOG( "Closing log file." );
-	log_term();
+	LOG( "Parent woke up. Will terminate now." );
+//	waitpid( pid_gps, NULL, 0 );
 
-	return EXIT_SUCCESS;
+	cleanAndExit( EXIT_SUCCESS );
+}
+
+void forkAndExec( int procID )
+{
+	int ret_err;
+	pid_t cpid = fork();
+	if( cpid < 0 )
+	{
+		/* Error in forking. Logging and exiting. */
+		ret_err = errno;
+		LOG( "Process failed to fork." );
+		LOG( strerror( ret_err ) );
+		LOG( "Fatal error, quiting." );
+		cleanAndExit( EXIT_FAILURE );
+	}
+	if( !cpid )
+	{
+		/* Fork() succeeded, Child process. */
+		/* Starting process. */
+		RAW_LOG( "New Born child process", "Starting child process: ", procID2Name( procID ) ) ;
+		execProc( procID );
+		/* Process exited. */
+		/* TODO: not supposed to get back here. */
+		RAW_LOG( procID2Name( procID ), "W: Unexpected behaviour: Child process returned." );
+		exit( EXIT_SUCCESS );
+	}
+
+	/* Updating processesDB. */
+	LOG( "Process forked successfully. Adding process to DB." );
+	processesDB[ procID ] = cpid;
+	processesCount++;
+printf("(%d) %d:%s -> %d\n", processesCount, procID, procID2Name( procID ), cpid );
+
+}
+
+void cleanAndExit( int status )
+{
+	/* Killing children. */
+	LOG( "Killing running processes." );
+	killAll();
+	/* Terminating log. */
+	LOG( "Terminating log and exiting." );
+	log_term();
+	/* Exiting. */
+	exit( status );
+}
+
+void killAll()
+{
+	/* Sending SIGTERM to all active processes. */
+	while( processesCount )
+	{
+		for( int i = 0; i < PROC_NUM; i++ )
+			if( processesDB[ i ] )
+			{
+				LOG( "Sending SIGTERM to process ", procID2Name( i ) );
+				kill( processesDB[ i ], SIGTERM );
+			}
+		sleep(1);
+	}
+}
+
+static void childDied( int signum, siginfo_t *siginfo, void *context )
+{
+	LOG( "Caught SIGCHLD." );
+	/* Identifying dead child. */
+	pid_t cpid = siginfo->si_pid;
+	for( int i = 0; i < PROC_NUM; i++ )
+		if( processesDB[ i ] == cpid )
+		{
+			/* Process identified, updating DB. */
+			LOG( "Dead child identified as: ", procID2Name( i ) ) ;
+			processesDB[ i ] = 0;
+			processesCount--;
+			LOG( "ProcessesDB updated." );
+			return;
+			break;
+		}
+	LOG( "W: Failed to identify dead child." );
 }
 

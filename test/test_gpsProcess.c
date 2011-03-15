@@ -30,7 +30,7 @@
 /* Definitions. */
 #define LOGFILE		"extra/gpsProcessTestLog"
 /* Macros. */
-#define LOG( x )	log_write( "gpsProcess test", x )
+#define LOG( ... )	log_write( "gpsProcess test", __VA_ARGS__, NULL )
 
 
 /* Functions. */

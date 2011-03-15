@@ -24,7 +24,7 @@
 #define LOGFILENAME	"extra/logfile"
 
 /* Marcros. */
-#define LOG( x )		log_write( "test_log", x );
+#define LOG( ... )		log_write( "test_log", __VA_ARGS__, NULL );
 
 /* Functions. */
 int main()
@@ -41,6 +41,7 @@ int main()
 	printf("Log file opened successfully.\n");
 	LOG( "First log." );
 	LOG( "Second log." );
+	LOG( "this", " is ", "one ", "long", " log.");
 	printf("Logs written.\n");
 	LOG( "Closing log." );
 
