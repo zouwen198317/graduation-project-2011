@@ -75,21 +75,35 @@ int log_term()
 }
 
 /* log_write: log data. */
-int log_write( char *title, char *msg )
+int log_write( char *title, ...)
 {
+	int msgSize = 0;
+	va_list ap, ap_cpy;
+	char *s;
+	/* Initializing va_list. */
+	va_start( ap, title );
+	va_copy( ap_cpy, ap );
 	/* Get current time. */
 	time_t timeNow = time( NULL );
 	char *timeText = ctime( &timeNow );
 	timeText[ strlen( timeText ) -1 ] = '\0';
 	/* Calculate message size. */
-	int msgSize = strlen( msg ) + strlen( title ) + strlen( timeText ) + 6;
+	while( ( s = va_arg( ap_cpy, char * ) ) )
+		msgSize += strlen( s );
+	msgSize += strlen( title ) + strlen( timeText ) + 6;
 	/* Allocate memory for the message to be printed. */
 	char *buff = (char *) malloc( msgSize );
 	/* Creating message. */
-	snprintf( buff, msgSize, "%s: %s: %s\n", timeText, title, msg );
+	snprintf( buff, msgSize, "%s: %s: ", timeText, title );
+	while( ( s = va_arg( ap, char * ) ) )
+		strncat( buff, s, msgSize );
+	buff[ msgSize - 2 ] = '\n';
+	buff[ msgSize - 1 ] = '\0';
 	/* Writing data to log file. */
 	write( ( log_fd > 0 ) ? log_fd : STDERR_FILENO, buff, msgSize );
-	/* Freeing allocated memory. */
+	/* Freeing allocated memory and cleaning up. */
+	va_end( ap_cpy );
+	va_end( ap );
 	free( buff );
 	return 0;
 }

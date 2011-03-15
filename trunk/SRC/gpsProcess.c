@@ -29,7 +29,7 @@
 
 
 /* Marcros. */
-#define LOG( x )	log_write( "GPS Process", x )
+#define LOG( ... )	log_write( "GPS Process", __VA_ARGS__, NULL )
 
 /* Function prototypes. */
 static void termHandle( int signum, siginfo_t *siginfo, void *context );
@@ -125,6 +125,6 @@ static void termHandle( int signum, siginfo_t *siginfo, void *context )
 		tcsetattr( gps_fd, TCSANOW, &oldTerm );
 		close( gps_fd );
 	}
-	LOG( "EXITING gpsProcess." );
+	LOG( "Exiting gpsProcess." );
 	exit( EXIT_SUCCESS );
 }
