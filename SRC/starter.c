@@ -27,10 +27,15 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <stdbool.h>
 /* End of Header files. */
 
 
 /* Definitions. */
+/* killProc() modes. */
+#define KP_MODE				bool
+#define	KP_BLOCK			0
+#define	KP_NBLOCK			1
 /* LOG definitions. */
 #define LOGFILE				"Logfile"
 /* Processes definitions. */
@@ -54,6 +59,7 @@
 /* TODO: Inlining. */
 inline void forkAndExec( int proc );
 inline void cleanAndExit( int status );
+inline void killProc( int procID, KP_MODE mode );
 inline void killAll();
 static void childDied( int signum, siginfo_t *siginfo, void *context );
 /* End of Functions' prototypes. */
@@ -101,7 +107,6 @@ int main()
 	LOG( "Parent process will sleep for 30 seconds." );
 	sleep( 30 );
 	LOG( "Parent woke up. Will terminate now." );
-//	waitpid( pid_gps, NULL, 0 );
 
 	cleanAndExit( EXIT_SUCCESS );
 }
@@ -128,14 +133,13 @@ void forkAndExec( int procID )
 		/* Process exited. */
 		/* TODO: not supposed to get back here. */
 		RAW_LOG( procID2Name( procID ), "W: Unexpected behaviour: Child process returned." );
-		exit( EXIT_SUCCESS );
+		exit( EXIT_FAILURE );
 	}
 
 	/* Updating processesDB. */
 	LOG( "Process forked successfully. Adding process to DB." );
 	processesDB[ procID ] = cpid;
 	processesCount++;
-printf("(%d) %d:%s -> %d\n", processesCount, procID, procID2Name( procID ), cpid );
 
 }
 
@@ -159,7 +163,7 @@ void killAll()
 		for( int i = 0; i < PROC_NUM; i++ )
 			if( processesDB[ i ] )
 			{
-				LOG( "Sending SIGTERM to process ", procID2Name( i ) );
+				LOG( "Sending SIGTERM to process: ", procID2Name( i ) );
 				kill( processesDB[ i ], SIGTERM );
 			}
 		sleep(1);
@@ -180,8 +184,27 @@ static void childDied( int signum, siginfo_t *siginfo, void *context )
 			processesCount--;
 			LOG( "ProcessesDB updated." );
 			return;
-			break;
 		}
-	LOG( "W: Failed to identify dead child." );
+	LOG( "W: Failed to identify dead child. (PID = ", cpid, ")" );
 }
 
+void killProc( int procID, KP_MODE mode )
+{
+	/* Do nothing, if  the process isn't running. */
+	while( processesDB[ procID ] )
+	{
+		/* Send SIGTERM to the process. */
+		LOG( "Sending SIGTERM to process: ", procID2Name( i ) );
+		kill( processesDB[ procID ], SIGTERM );
+		/* Return immediately, if the mode is set to non-block. */
+		if( mode == KP_NBLOCK )
+			return;
+		/* Blocking mode:
+		 * Setting an alarm in 2 seconds, so that if the parent process
+		 * received SIGCHLD for any reason, it wouldn't hang.
+		 */
+		LOG( "Waiting for process ", procID2Name( procID ), " to terminate." );
+		alarm( 2 );
+		waitpid( processesDB[ procID ], NULL, 0 );
+	}
+}
