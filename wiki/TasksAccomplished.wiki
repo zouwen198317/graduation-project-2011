@@ -5,8 +5,8 @@ _(last update Sunday, the 27th of March, 2011)_
 == List of accomplished tasks ==
 
 || *Date*	|| *Task(s) accomplished* ||
-||Sep, 2010||	Topic chosen (ADAS).||
-||Oct, 2010||	Cameras, networking, and server added to the project.||
+||Oct 23, 2010||	Topic chosen (ADAS).||
+||Oct 30, 2010||	Cameras, networking, and server added to the project.||
 ||Nov 02, 2010||	Mailing list (Google group) created.||
 ||Jan 19, 2011||	Create PCB board for GPS module.||
 ||Jan 22, 2011||	GPS module is working fine.||
