@@ -1,5 +1,5 @@
 /*
- * The SMS testing code.
+ * The GPS data parser testing code.
  * Copyright (C) 2011  Michael M. Behman (michael.behman@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../SRC/sms.h"
+/* Header files. */
+#include "../SRC/gpsXml.h"
+#include <stdlib.h>
+#include <string.h>
 
 int main()
 {
-	send_sms( "0128994212", "This is a test SMS. Apparently, it works." );
-	return 0;
+	car_id = malloc( 10 );
+	GPoint new_point;
+	strncpy( car_id, "testcarid", 9 );
+
+	new_point.lng = 30.2133;
+	new_point.lat = 29.1234;
+	addGpsPoint( new_point );
+
+	return EXIT_SUCCESS;
 }

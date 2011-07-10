@@ -1,0 +1,47 @@
+<markers>
+
+<marker lat="31.22473" lng="29.95206" html="Your car is here" />
+
+<line colour="#FF0000" width="4">
+	<point lat="31.260196" lng="29.990471" />
+	<point lat="31.23533" lng="29.95935" />
+	<point lat="31.22473" lng="29.95206" />
+</line>
+
+<line colour="#EF0000" width="4">
+        <point lat="31.22134" lng="29.990471" />
+        <point lat="31.16789" lng="29.95935" />
+        <point lat="31.12345" lng="29.95206" />
+</line>
+
+<line colour="#FE0000" width="4">
+        <point lat="31.43534" lng="29.990471" />
+        <point lat="31.67867" lng="29.95935" />
+        <point lat="31.34355" lng="29.95206" />
+</line>
+
+<line colour="#F00000" width="4">
+        <point lat="31.87655" lng="29.990471" />
+        <point lat="31.34534" lng="29.95935" />
+        <point lat="31.12312" lng="29.95206" />
+</line>
+
+<line colour="#F10000" width="4">
+        <point lat="31.98979" lng="29.990471" />
+        <point lat="31.65777" lng="29.95935" />
+        <point lat="31.45333" lng="29.95206" />
+</line>
+
+<line colour="#FA0000" width="4">
+        <point lat="31.76557" lng="29.990471" />
+        <point lat="31.45666" lng="29.95935" />
+        <point lat="31.24344" lng="29.95206" />
+</line>
+
+<line colour="#FB0000" width="4">
+        <point lat="31.27777" lng="29.990471" />
+        <point lat="31.66666" lng="29.95935" />
+        <point lat="31.34444" lng="29.95206" />
+</line>
+
+</markers> 
