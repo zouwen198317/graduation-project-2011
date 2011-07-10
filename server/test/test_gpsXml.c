@@ -17,7 +17,7 @@
  */
 
 /* Header files. */
-#include "../SRC/server/gpsXml.h"
+#include "../SRC/gpsXml.h"
 #include <stdlib.h>
 #include <string.h>
 

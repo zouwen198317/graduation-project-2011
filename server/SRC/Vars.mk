@@ -1,7 +1,7 @@
 # Makefile variables files for library codes
 # Paths
-BIN_PATH := ..\/server_bin\/
-EXTRA_PATH := ..\/server_bin\/
+BIN_PATH := ..\/bin\/
+EXTRA_PATH := ..\/bin\/
 
 # Global variables
 OBJECTS := logger.o gpsXml.o carsCommunicationDaemon.o
