@@ -64,5 +64,12 @@ int log_term();
  */
 int log_write( char *title, ...);
 
+/* itoa:
+ * logger implements an itoa (integer to array of chars) function to help
+ * passing numbers to the log_write function. It takes only the number to be
+ * converted as its single parameter, and returns an pointer to character that
+ * contains the converted number.
+ */
+char * itoa( int number );
 
 #endif
