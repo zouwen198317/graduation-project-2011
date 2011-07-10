@@ -4,10 +4,11 @@ BIN_PATH := ..\/bin\/
 EXTRA_PATH := ..\/bin\/
 
 # Global variables
-OBJECTS := gpsParser.o gpsProcess.o logger.o
+OBJECTS := gpsParser.o gpsProcess.o logger.o starter.o sms.o
 EXECUTABLES := starter
 EXTRA := Logfile
 
 # Dependencies
 starter_DEP := $(OBJECTS)
 gpsProcess_DEP := logger.o gpsParser.o
+sms_DEP := logger.o

@@ -107,3 +107,19 @@ int log_write( char *title, ...)
 	free( buff );
 	return 0;
 }
+
+char * itoa( int number )
+{
+	/* Allocating enough memory. */
+	char * buffer = malloc( 6 );
+	int register i = 9;
+	/* Parsing the number backwardly. */
+	buffer[ i-- ] = '\0';
+	while( number )
+	{
+		buffer[ i-- ] = number - ( number / 10 ) * 10 + 48;
+		number /= 10;
+	}
+	/* Returning the beginning of the number. */
+	return buffer + i + 1;
+}
