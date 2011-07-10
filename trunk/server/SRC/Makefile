@@ -1,4 +1,4 @@
-include ../Common.mk
+include ../../Common.mk
 include Vars.mk
 
 
