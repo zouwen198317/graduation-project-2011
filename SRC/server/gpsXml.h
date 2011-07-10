@@ -1,5 +1,5 @@
 /*
- * The SMS testing code.
+ * The GPS-to-XML header file.
  * Copyright (C) 2011  Michael M. Behman (michael.behman@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../SRC/sms.h"
+#ifndef __GPS_XML__
+#define __GPS_XML__
 
-int main()
+/* Typedefs. */
+typedef struct
 {
-	send_sms( "0128994212", "This is a test SMS. Apparently, it works." );
-	return 0;
-}
+	double lng;
+	double lat;
+} GPoint;
+
+/* Global variables. */
+char * car_id;
+
+/* Functions' prototypes. */
+int addGpsPoint( GPoint );
+
+
+
+#endif
