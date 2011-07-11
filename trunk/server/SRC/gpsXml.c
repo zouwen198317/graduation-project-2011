@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include "logger.h"
 #include <stdio.h>
+#include <mcheck.h>
 
 /* Definitions. */
 #define MAIN_DIRECTORY "/home/michael/"
@@ -34,6 +35,7 @@
 
 /* Functions' prototypes. */
 int updateGpsFiles();
+int init_dir( char * );
 
 /* Functions. */
 int addGpsPoint( GPoint new_point )
@@ -89,7 +91,7 @@ int addGpsPoint( GPoint new_point )
 
 	LOG( "Adding new point." );
 	memset( buffer, '\0', BUFFSIZ );
-	sprintf( buffer, "\t<point lat=\"%d\" lng=\"%d\" />\n</line>", new_point.lat, new_point.lng );
+	sprintf( buffer, "\t<point lat=\"%lf\" lng=\"%lf\" />\n</line>", new_point.lat, new_point.lng );
 	if( write( fd, buffer, strlen( buffer ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
@@ -101,60 +103,24 @@ int addGpsPoint( GPoint new_point )
 	LOG( "Closing file." );
 	close( fd );
 	free( buffer );
+
 	return EXIT_SUCCESS;
-}
-
-int temp_func()
-{
-	if( !car_id )
-		return EXIT_FAILURE;
-
-	char * buffer = malloc( BUFFSIZ );
-	char * date_buff = malloc( 7 );
-	char * filename;
-	DIR * cwd;
-	struct dirent ** namelist;
-	int ret;
-	time_t time_now = time( NULL );
-
-	strncat( buffer, MAIN_DIRECTORY, BUFFSIZ );
-	strncat( buffer, car_id, BUFFSIZ - strlen( car_id ) );
-	strncat( buffer, "/", 1 );
-
-	LOG( "Main directory name = '", buffer, "'." );
-
-	while( !( cwd = opendir( buffer ) ) )
-		if( errno == ENOENT )
-		{
-			LOG( strerror( errno ) );
-			if( mkdir( buffer, 0755 ) < 0 )
-			{
-				LOG( strerror( errno ) );
-				return EXIT_FAILURE;
-			}
-			LOG( "Directory '", buffer, "' created successfully." );
-		}
-		else
-		{
-			LOG( strerror( errno ) );
-			return EXIT_FAILURE;
-		}
-	LOG( "Directory '", buffer, "' opened successfully." );
-
-	strftime( date_buff, 7, "%y%m%d", localtime( &time_now ) );
-	LOG( "Attempting to open the file ", date_buff, "." );
-
-
 }
 
 int updateGpsFiles()
 {
 	char * buffer = malloc( BUFFSIZ );
+	char * bufferc;
+	char colors[ 43 ];
+	char color[ 7 ];
 	char * date_buff;
 	time_t time_now = time( NULL );
 	struct stat st;
+	int ret;
+	int fd, fdc;
+	struct dirent ** namelist;
 
-	strncat( buffer, MAIN_DIRECTORY, BUFFSIZ );
+	strncpy( buffer, MAIN_DIRECTORY, BUFFSIZ );
 	strncat( buffer, car_id, BUFFSIZ - strlen( buffer ) );
 	strncat( buffer, "/", 1 );
 
@@ -168,13 +134,7 @@ int updateGpsFiles()
 			return EXIT_FAILURE;
 		}
 		LOG( "Directory does not exist." );
-		if( mkdir( buffer, 0755 ) < 0 )
-		{
-			LOG( strerror( errno ) );
-			free( buffer );
-			return EXIT_FAILURE;
-		}
-		LOG( "Directory '", buffer, "' created successfully." );
+		init_dir( buffer );
 	}
 	else if( !( st.st_mode & S_IFDIR ) )
 	{
@@ -191,34 +151,126 @@ int updateGpsFiles()
 			return EXIT_FAILURE;
 		}
 		free( new_name );
-		if( mkdir( buffer, 0755 ) < 0 )
+		init_dir( buffer );
+	}
+	else
+	{
+		LOG( "Scanning and sorting files in the directory." );
+		if( ( ret = scandir( buffer, &namelist, 0, alphasort ) ) < 0 )
 		{
 			LOG( strerror( errno ) );
 			free( buffer );
 			return EXIT_FAILURE;
 		}
-		LOG( "Directory '", buffer, "' created successfully." );
+		if( ret >= 10 )
+		{
+			char * tempbuff = malloc( strlen( buffer ) + strlen ( namelist[ 2 ] -> d_name ) + 1 );
+			strcpy( tempbuff, buffer );
+			strcat( tempbuff, namelist[ 2 ] -> d_name );
+			LOG( "8 files are present in the directory." );
+			LOG( "Deleting: '", tempbuff, "'." );
+			if( unlink( tempbuff ) < 0)
+			{
+				LOG( strerror( errno ) );
+				free( tempbuff );
+				free( buffer );
+				return EXIT_FAILURE;
+			}
+			free( tempbuff );
+		}
 	}
 
 	date_buff = malloc( 7 );
 	strftime( date_buff, 7, "%y%m%d", localtime( &time_now ) );
+	bufferc = malloc( strlen( buffer ) + 7 );
+	strncpy( bufferc, buffer, strlen( buffer ) + 1 );
+	strncat( bufferc, "colors", 7 );
 	strncat( buffer, date_buff, BUFFSIZ - strlen( buffer ) );
 	free( date_buff );
 
-/*	LOG( "Looking for a file called ", date_buff, "." );
-
-if( ( ret = scandir( buffer, &namelist, 0, alphasort ) ) < 0 )
+	LOG( "Creating a new file: '", buffer, "'." );
+	if( ( fd = open( buffer, O_CREAT | O_RDWR, 0644 ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( bufferc );
+		free( buffer );
+		return EXIT_FAILURE;
+	}
+	
+	memset( buffer, '\0', BUFFSIZ );
+	LOG("Generating line wrappers." );
+	if( ( fdc = open( bufferc, O_RDWR ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( buffer );
+		free( bufferc );
+		return EXIT_FAILURE;
+	}
+	read( fdc, colors, 42 );
+	colors[ 42 ] = '\0';
+	strncpy( color, colors, 6 );
+	color[ 6 ] = '\0';
+	for( int i = 6; i < 42; i++ )
+		colors[ i - 6 ] = colors[ i ];
+	for( int i = 36; i < 42; i++ )
+		colors[ i ] = color[ i - 36 ];
+	if( lseek( fdc, 0, SEEK_SET ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( buffer );
+		free( bufferc );
+		return EXIT_FAILURE;
+	}
+	if( write( fdc, colors, 42 ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( buffer );
+		free( bufferc );
+		return EXIT_FAILURE;
+	}
+	close( fdc );
+	sprintf( buffer, "<line colour=\"#%s width=\"4\">\n</line>", color );
+	if( write( fd, buffer , 40 ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		return EXIT_FAILURE;
 	}
 
-	if( strncmp( namelist[ --ret ] -> d_name, date_buff, 6 ) != 0 )
+	free( buffer );
+	close( fd );
+	return EXIT_SUCCESS;
+}
+
+int init_dir( char * buffer )
+{
+	int fd;
+	char * buff = malloc( BUFFSIZ );
+	
+	LOG( "Initializing the directory and the files required." );
+	if( mkdir( buffer, 0755 ) < 0 )
 	{
-		LOG( "Not found!" );
-	}else
-	LOG( "Found!" );
-*/
+		LOG( strerror( errno ) );
+		return EXIT_FAILURE;
+	}
+	LOG( "Directory '", buffer, "' created successfully." );
 
+	strcpy( buff, buffer );
+	strcat( buff, "colors" );
 
+	if( ( fd = open( buff, O_CREAT | O_RDWR, 0644 ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( buff );
+		return EXIT_FAILURE;
+	}
+	LOG( "File '", buff, "' created successfully." );
+	LOG( "Writing initial data to '", buff, "'." );
+	free( buff );
+	if( write( fd, "000000FFFFFFFF000000FF000000FFFFFF0000FFFF", 42 ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		return EXIT_FAILURE;
+	}
+	close( fd );
+	return EXIT_SUCCESS;
 }
