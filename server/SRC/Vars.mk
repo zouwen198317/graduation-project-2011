@@ -4,10 +4,10 @@ BIN_PATH := ..\/bin\/
 EXTRA_PATH := ..\/bin\/
 
 # Global variables
-OBJECTS := logger.o gpsXml.o carsCommunicationDaemon.o
-EXECUTABLES := carsCommunicationDaemon
+OBJECTS := logger.o gpsXml.o commServerD.o
+EXECUTABLES := commServerD
 EXTRA := Logfile
 
 # Dependencies
-carsCommunicationDaemon_DEP := $(OBJECTS)
+commServerD_DEP := $(OBJECTS)
 gpsXml_DEP := logger.o

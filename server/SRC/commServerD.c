@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include "logger.h"
 #include <sys/types.h>
+#include <arpa/inet.h>
 
 /* Definitions. */
 #define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
@@ -115,7 +116,7 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 	/* TODO: Check user existance and state. */
 	/* TODO: Check port lists and pick a free one. */
 
-LOG( inet_ntoa( saddr.sin_addr.s_addr ) ); /* TODO: Remove and store IP. */
+LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 	if( ( DGRAM_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOGd( my_pid, strerror( errno ) );

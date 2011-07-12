@@ -18,6 +18,7 @@
 
 
 /* Header files. */
+#include "serverCommunication.h"
 #include <sys/socket.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -26,6 +27,7 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include "logger.h"
+#include <arpa/inet.h>
 
 /* Definitions. */
 #define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
@@ -42,7 +44,7 @@
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
 
 /* Functions. */
-int main( void )
+int connectToServer( void )
 {
 	int my_socket, my_socket2;
 	int ret;
@@ -71,7 +73,7 @@ int main( void )
 			saddr.sin_port = htons( INITPORT );
 	
 			LOG( "Attempting to send identification pattern to server" );
-			if( ret = sendto( my_socket, buffer, strlen( buffer ), 0, (struct sockaddr *) &saddr, sizeof( struct sockaddr ) ) < 0 )
+			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, (struct sockaddr *) &saddr, sizeof( struct sockaddr ) ) ) < 0 )
 				LOG( strerror( errno ) );
 			else
 				break;
@@ -102,7 +104,7 @@ int main( void )
 		FD_SET( my_socket2, &rfds );
 		time_out.tv_sec = SERVER_TIMEOUT;
 		time_out.tv_usec = 0;
-LOG( itoa(ntohs( saddr.sin_port ) ) );
+LOG( itoa( ntohs( saddr.sin_port ) ) );
 		LOG( "Waiting for server to reply." );
 		ret = select( my_socket2 + 1, &rfds, NULL, NULL, &time_out );
 		if( ret < 0 )
