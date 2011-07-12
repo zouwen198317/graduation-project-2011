@@ -28,6 +28,7 @@
 #include <sys/select.h>
 #include "logger.h"
 #include <arpa/inet.h>
+#include <netdb.h>
 
 /* Definitions. */
 #define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
@@ -37,8 +38,8 @@
 #define INITPORT 6543
 #define SERVER_TIMEOUT 15
 
-/* TODO: remove when Domain Name resolution is implemented. */
-#define temp_server_ip "10.0.0.102"
+/* Functions parameters. */
+struct sockaddr_in *getip( const char * );
 
 /* Macros. */
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
@@ -53,7 +54,9 @@ int connectToServer( void )
 	socklen_t socket_len;
 	fd_set rfds;
 	struct timeval time_out; 
-
+	struct sockaddr_in *serverInfo = getip( SERVERNAME );
+LOG( inet_ntoa( serverInfo -> sin_addr ) );
+return EXIT_SUCCESS;
 	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
@@ -69,7 +72,7 @@ int connectToServer( void )
 		while( 1 )
 		{
 			saddr.sin_family = AF_INET;
-			saddr.sin_addr.s_addr = inet_addr( temp_server_ip );
+//			saddr.sin_addr.s_addr = inet_addr( serverIP );
 			saddr.sin_port = htons( INITPORT );
 	
 			LOG( "Attempting to send identification pattern to server" );
@@ -135,7 +138,7 @@ LOG( itoa( ntohs( saddr.sin_port ) ) );
 	LOG( "STREAM socket created successfully." );
 
 	saddr3.sin_family = AF_INET;
-	saddr3.sin_addr.s_addr = inet_addr( temp_server_ip );
+//	saddr3.sin_addr.s_addr = inet_addr( serverIP );
 	saddr3.sin_port = htons( atoi( buffer ) );
 
 	while( bind( my_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
@@ -165,4 +168,50 @@ LOG( itoa( ntohs( saddr.sin_port ) ) );
 	close( my_socket );
 
 	return 0;
+}
+
+
+struct sockaddr_in *getip( const char *domainName )
+{
+	struct addrinfo *info, *temp;
+	int ret, sockfd;
+	struct sockaddr_in *saddr;
+		
+	if( ( ret = getaddrinfo( domainName, itoa(INITPORT), NULL, &info ) ) != 0 )
+	{
+		LOG( gai_strerror( ret ) );
+		return NULL;
+	}
+
+	for( temp = info; temp != NULL;  temp = temp -> ai_next )
+	{
+		if( ( sockfd = socket( temp -> ai_family, temp -> ai_socktype, temp -> ai_protocol ) ) < 0 )
+		{
+			LOG( strerror( errno ) );
+			continue;
+		}
+		if( connect( sockfd, temp -> ai_addr, temp -> ai_addrlen) < 0 )
+		{
+			LOG( strerror( errno ) );
+			close( sockfd );
+			continue;
+		}
+		close( sockfd );
+		break;
+	}
+
+	if( temp == NULL )
+	{
+		LOG( "No valid return addresses were found." );
+		return NULL;
+	}
+
+	saddr = (struct sockaddr_in *) malloc( sizeof( struct sockaddr_in ) );
+	saddr -> sin_family = temp -> ai_family;
+	saddr -> sin_port = htons( INITPORT );
+	saddr -> sin_addr = temp -> ai_addr -> sin_addr;
+
+	freeaddrinfo( info );
+
+	return saddr;
 }
