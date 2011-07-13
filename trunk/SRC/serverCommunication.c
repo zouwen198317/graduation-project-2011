@@ -34,12 +34,12 @@
 #define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
 #define BUFFSIZ 1024
 #define CAR_ID "TestID"
-#define SERVERNAME "e-car.dyndns.org"
+#define SERVERNAME "10.0.0.101"//"e-car.dyndns.org"
 #define INITPORT 6543
 #define SERVER_TIMEOUT 15
 
 /* Functions parameters. */
-struct sockaddr_in *getip( const char * );
+struct sockaddr *getip( const char * );
 
 /* Macros. */
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
@@ -49,14 +49,20 @@ int connectToServer( void )
 {
 	int my_socket, my_socket2;
 	int ret;
-	struct sockaddr_in saddr, saddr2, saddr3, ret_saddr;
+	struct sockaddr_in saddr2, saddr3, ret_saddr;
+	struct sockaddr saddr;
 	char * buffer = malloc( BUFFSIZ );
 	socklen_t socket_len;
 	fd_set rfds;
 	struct timeval time_out; 
-	struct sockaddr_in *serverInfo = getip( SERVERNAME );
-LOG( inet_ntoa( serverInfo -> sin_addr ) );
-return EXIT_SUCCESS;
+	struct sockaddr *serverInfo = getip( SERVERNAME );
+
+	if( serverInfo == NULL )
+	{
+		LOG( "Could not resolve server's domain name." );
+		return EXIT_FAILURE;
+	}
+
 	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
@@ -71,12 +77,13 @@ return EXIT_SUCCESS;
 	{
 		while( 1 )
 		{
-			saddr.sin_family = AF_INET;
+//			saddr.sin_family = AF_INET;
 //			saddr.sin_addr.s_addr = inet_addr( serverIP );
-			saddr.sin_port = htons( INITPORT );
+//			saddr.sin_port = htons( INITPORT );
+			memcpy( &saddr, serverInfo, sizeof( struct sockaddr ) );
 	
 			LOG( "Attempting to send identification pattern to server" );
-			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, (struct sockaddr *) &saddr, sizeof( struct sockaddr ) ) ) < 0 )
+			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, &saddr, sizeof( struct sockaddr ) ) ) < 0 )
 				LOG( strerror( errno ) );
 			else
 				break;
@@ -107,7 +114,6 @@ return EXIT_SUCCESS;
 		FD_SET( my_socket2, &rfds );
 		time_out.tv_sec = SERVER_TIMEOUT;
 		time_out.tv_usec = 0;
-LOG( itoa( ntohs( saddr.sin_port ) ) );
 		LOG( "Waiting for server to reply." );
 		ret = select( my_socket2 + 1, &rfds, NULL, NULL, &time_out );
 		if( ret < 0 )
@@ -138,7 +144,8 @@ LOG( itoa( ntohs( saddr.sin_port ) ) );
 	LOG( "STREAM socket created successfully." );
 
 	saddr3.sin_family = AF_INET;
-//	saddr3.sin_addr.s_addr = inet_addr( serverIP );
+	saddr3.sin_addr.s_addr = ( ( struct sockaddr_in *)serverInfo ) -> sin_addr.s_addr;
+//	memcpy( &( saddr3.sin_addr ), &( ( ( struct sockaddr_in * )serverInfo ) -> sin_addr ) , sizeof( struct in_addr ) );
 	saddr3.sin_port = htons( atoi( buffer ) );
 
 	while( bind( my_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
@@ -171,17 +178,18 @@ LOG( itoa( ntohs( saddr.sin_port ) ) );
 }
 
 
-struct sockaddr_in *getip( const char *domainName )
+struct sockaddr *getip( const char *domainName )
 {
 	struct addrinfo *info, *temp;
 	int ret, sockfd;
-	struct sockaddr_in *saddr;
+	struct sockaddr *saddr;
 		
 	if( ( ret = getaddrinfo( domainName, itoa(INITPORT), NULL, &info ) ) != 0 )
 	{
 		LOG( gai_strerror( ret ) );
 		return NULL;
 	}
+	LOG( "Domain Name resolved. Testing returned addresses." );
 
 	for( temp = info; temp != NULL;  temp = temp -> ai_next )
 	{
@@ -206,12 +214,10 @@ struct sockaddr_in *getip( const char *domainName )
 		return NULL;
 	}
 
-	saddr = (struct sockaddr_in *) malloc( sizeof( struct sockaddr_in ) );
-	saddr -> sin_family = temp -> ai_family;
-	saddr -> sin_port = htons( INITPORT );
-	saddr -> sin_addr = temp -> ai_addr -> sin_addr;
-
+	saddr = (struct sockaddr *) malloc( sizeof( struct sockaddr ) );
+	memcpy( saddr, temp -> ai_addr, sizeof( struct sockaddr ) );
 	freeaddrinfo( info );
 
+	LOG( "A valid address is found: ", inet_ntoa( ( ( struct sockaddr_in *)saddr ) -> sin_addr ), " ." );
 	return saddr;
 }
