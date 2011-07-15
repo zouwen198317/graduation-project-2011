@@ -27,12 +27,14 @@
 #include "logger.h"
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include "networkConstants.h"
+#include <stdint.h>
+#include "gpsXml.h"
+#include <limits.h>
 
 /* Definitions. */
-#define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
 #define BUFFSIZ 1024
-#define INITPORT 6543
-#define CONNECTION_DELAY 2
+#define CONNECTION_DELAY 5
 #define CONNECTION_ATTEMPTS 15
 #define PORT_TRANSMISSION_ATTEMPTS 5
 
@@ -42,15 +44,17 @@
 
 /* Function prototypes. */
 void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t );
+void _string_analyze( char * buffer, int len );
 
 /* Functions. */
 int main( void )
 {
-	int my_socket, ret_socket;
+	int my_socket;
 	int ret;
 	struct sockaddr_in my_saddr, ret_saddr;
 	char * buffer = malloc( BUFFSIZ );
 	socklen_t socket_len;
+	int optval = 1;
 
 	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
@@ -58,6 +62,11 @@ int main( void )
 		exit( EXIT_FAILURE );
 	}
 	LOG( "DGRAM socket created successfully." );
+
+	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+		LOG( "Couldn't set socket to re-use address." );
+	else
+		LOG( "Socket set to re-use address successfully." );
 
 	my_saddr.sin_family = AF_INET;
 	my_saddr.sin_port = htons( INITPORT );
@@ -104,8 +113,11 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 {
 	int DGRAM_socket, STREAM_socket;
 	int attempts = 0, attempts2 = 0;
+	int ret;
 	pid_t my_pid = getpid();
 	LOG( "Daemon created with pid=", itoa( my_pid ), "." );
+	int optval = 1;
+	char * read_buff = malloc( NETWORK_BUFFER_SIZE );
 
 	if( strncmp( buffer, IDENTIFICATION_PATTERN, strlen( IDENTIFICATION_PATTERN ) ) != 0 )
 	{
@@ -123,10 +135,15 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 		return;
 	}
 	LOGd( my_pid, "DGRAM socket created successfully." );
+
+	if( setsockopt( DGRAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+		LOG( "Couldn't set socket to re-use address." );
+	else
+		LOG( "Socket set to re-use address successfully." );
+
 	while( 1 )
 	{
 		saddr.sin_port = htons( INITPORT );
-LOG( itoa(ntohs( saddr.sin_port ) ));
 		while( ( sendto( DGRAM_socket, "7654" /* TODO: variable port.*/, 4/* TODO: strlen( buffer )*/, 0, (struct sockaddr *) &saddr, socket_len ) < 0 ) && attempts < PORT_TRANSMISSION_ATTEMPTS )
 		{
 			LOGd( my_pid, strerror( errno ) );
@@ -148,11 +165,14 @@ LOG( itoa(ntohs( saddr.sin_port ) ));
 			sleep( 1 );
 		}
 		LOGd( my_pid, "STREAM socket created successfully." );
+
+		if( setsockopt( STREAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+			LOG( "Couldn't set socket to re-use address." );
+		else
+			LOG( "Socket set to re-use address successfully." );
 	
-		/* TODO: Start TCP connection. */
 		saddr.sin_port = htons( atoi( "7654" /* TODO:Change with variable port. */ ) );
 		LOGd( my_pid, "Connecting to car." );
-LOG( ntohs( saddr.sin_port ) );
 		if( ( connect( STREAM_socket, (struct sockaddr *) &saddr, sizeof( struct sockaddr ) ) < 0 ) && ( attempts2 <  CONNECTION_ATTEMPTS ) )
 		{
 			LOGd( my_pid, strerror( errno ) );
@@ -171,7 +191,89 @@ LOG( ntohs( saddr.sin_port ) );
 	LOG( "Connected successfully. Ditching the DGRAM socket." );
 	close( DGRAM_socket );
 
+	LOG( "Starting reading loop." );
+	while( 1 )
+	{
+		if( ( ret = read( STREAM_socket, read_buff, NETWORK_BUFFER_SIZE ) ) < 0 )
+			if( errno != EINTR )
+			{
+				LOG( strerror( errno ) );
+				close( STREAM_socket );
+				free( read_buff );
+				return;
+			}
+		read_buff[ ret ] = '\0';
+		LOG( "Received data: '", read_buff, "'." );
+		_string_analyze( read_buff, ret );
+	}
 
-
-
+	LOG( "Program flow got out of the reading loop." );
+	close( STREAM_socket );
+	free( read_buff );
+	return;
 }
+
+
+void _string_analyze( char * buffer, int len )
+{
+	unsigned char ident = buffer[0];
+	buffer++;
+	uint32_t size = _getsize( buffer );
+
+	buffer += 4;
+
+	if( strlen( buffer ) > size )
+		LOG( "Extra data transmitted. Continuing..." );
+	else if( strlen( buffer ) < size )
+	{
+		LOG( "Insuffucient data transmitted. Dropping data..." );
+		return;
+	}
+
+	switch( ident )
+	{
+		case GPS_IDENT:
+		{
+			char * temp;
+			double lng, lat, spd;
+			GPoint newPoint;
+
+			LOG( "GPS data detected. Parsing..." );
+			lng = strtol( buffer, &temp, 10 );
+			if( lng == LONG_MAX || lng == LONG_MIN )
+			{
+				LOG( strerror( errno ) );
+				LOG( "Dropping data." );
+				return;
+			}
+			LOG( "Longitude fetched." );
+			lat = strtol( temp, &buffer, 10 );
+			if( lat == LONG_MAX || lat == LONG_MIN )
+			{
+				LOG( strerror( errno ) );
+				LOG( "Dropping data." );
+				return;
+			}
+			LOG( "Latitude fetched." );
+			spd = strtol( buffer, &temp, 10 );
+			if( spd == LONG_MAX || spd == LONG_MIN )
+			{
+				LOG( strerror( errno ) );
+				LOG( "Dropping data." );
+				return;
+			}
+			LOG( "Speed fetched." );
+			LOG( "Updating the XML file." );
+			newPoint.lng = lng;
+			newPoint.lat = lat;
+			newPoint.spd = spd;
+			if( addGpsPoint( newPoint ) == EXIT_FAILURE )
+				LOG( "Failed to add point. Dropping..." );
+			break;
+		}
+		default:
+			LOG( "Failed to identify data. Dropping." );
+	}
+}
+
+

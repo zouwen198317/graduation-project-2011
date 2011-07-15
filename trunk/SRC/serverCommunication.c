@@ -29,13 +29,12 @@
 #include "logger.h"
 #include <arpa/inet.h>
 #include <netdb.h>
+#include "networkConstants.h"
 
 /* Definitions. */
-#define IDENTIFICATION_PATTERN "#3c4r1d3n74ndr3d1rm3@"
 #define BUFFSIZ 1024
 #define CAR_ID "TestID"
-#define SERVERNAME "10.0.0.101"//"e-car.dyndns.org"
-#define INITPORT 6543
+#define SERVERNAME "127.0.0.1"//"e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
 
 /* Functions parameters. */
@@ -56,6 +55,8 @@ int connectToServer( void )
 	fd_set rfds;
 	struct timeval time_out; 
 	struct sockaddr *serverInfo = getip( SERVERNAME );
+	int optval = 1;
+
 
 	if( serverInfo == NULL )
 	{
@@ -69,6 +70,11 @@ int connectToServer( void )
 		exit( EXIT_FAILURE );
 	}
 	LOG( "DGRAM socket created for transmission successfully." );
+
+	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+		LOG( "Couldn't set socket to re-use address." );
+	else
+		LOG( "Socket set to re-use address successfully." );
 
 	strncpy( buffer, IDENTIFICATION_PATTERN, BUFFSIZ );
 	strncat( buffer, CAR_ID, BUFFSIZ - strlen(buffer) );
@@ -97,6 +103,11 @@ int connectToServer( void )
 			exit( EXIT_FAILURE );
 		}
 		LOG( "DGRAM socket created for receiving successfully." );
+
+		if( setsockopt( my_socket2, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+			LOG( "Couldn't set socket to re-use address." );
+		else
+			LOG( "Socket set to re-use address successfully." );
 
 		saddr2.sin_family = AF_INET;
 		saddr2.sin_port = htons( INITPORT );
@@ -143,9 +154,13 @@ int connectToServer( void )
 	}
 	LOG( "STREAM socket created successfully." );
 
+	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+		LOG( "Couldn't set socket to re-use address." );
+	else
+		LOG( "Socket set to re-use address successfully." );
+
 	saddr3.sin_family = AF_INET;
-	saddr3.sin_addr.s_addr = ( ( struct sockaddr_in *)serverInfo ) -> sin_addr.s_addr;
-//	memcpy( &( saddr3.sin_addr ), &( ( ( struct sockaddr_in * )serverInfo ) -> sin_addr ) , sizeof( struct in_addr ) );
+	saddr3.sin_addr.s_addr = inet_addr( "127.0.0.1" );
 	saddr3.sin_port = htons( atoi( buffer ) );
 
 	while( bind( my_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
@@ -183,7 +198,8 @@ struct sockaddr *getip( const char *domainName )
 	struct addrinfo *info, *temp;
 	int ret, sockfd;
 	struct sockaddr *saddr;
-		
+	int optval = 1;
+
 	if( ( ret = getaddrinfo( domainName, itoa(INITPORT), NULL, &info ) ) != 0 )
 	{
 		LOG( gai_strerror( ret ) );
@@ -198,6 +214,12 @@ struct sockaddr *getip( const char *domainName )
 			LOG( strerror( errno ) );
 			continue;
 		}
+
+		if( setsockopt( sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+			LOG( "Couldn't set socket to re-use address." );
+		else
+			LOG( "Socket set to re-use address successfully." );
+
 		if( connect( sockfd, temp -> ai_addr, temp -> ai_addrlen) < 0 )
 		{
 			LOG( strerror( errno ) );
