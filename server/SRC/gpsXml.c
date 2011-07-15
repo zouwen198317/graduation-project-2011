@@ -24,10 +24,12 @@
 #include <dirent.h>
 #include "logger.h"
 #include <stdio.h>
-#include <mcheck.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 /* Definitions. */
 #define MAIN_DIRECTORY "/home/michael/"
+#define XML_DIRECTORY "/home/michael/xmls/"
 #define BUFFSIZ 100
 
 /* Macros. */
@@ -36,6 +38,8 @@
 /* Functions' prototypes. */
 int updateGpsFiles();
 int init_dir( char * );
+int updateMainXmlFile( GPoint );
+bool checkXml( char * );
 
 /* Functions. */
 int addGpsPoint( GPoint new_point )
@@ -103,8 +107,8 @@ int addGpsPoint( GPoint new_point )
 	LOG( "Closing file." );
 	close( fd );
 	free( buffer );
-
-	return EXIT_SUCCESS;
+	
+	return updateMainXmlFile( new_point );
 }
 
 int updateGpsFiles()
@@ -229,8 +233,8 @@ int updateGpsFiles()
 		return EXIT_FAILURE;
 	}
 	close( fdc );
-	sprintf( buffer, "<line colour=\"#%s width=\"4\">\n</line>", color );
-	if( write( fd, buffer , 40 ) < 0 )
+	sprintf( buffer, "<line colour=\"#%s\" width=\"4\">\n</line>", color );
+	if( write( fd, buffer , 41 ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		return EXIT_FAILURE;
@@ -273,4 +277,127 @@ int init_dir( char * buffer )
 	}
 	close( fd );
 	return EXIT_SUCCESS;
+}
+
+int updateMainXmlFile( GPoint newPoint )
+{
+	char *xmlFile = malloc( strlen( XML_DIRECTORY ) + 5 + strlen( car_id ) );
+	char *tempFile = malloc( strlen( MAIN_DIRECTORY ) + 8 + strlen( car_id ) );
+	char *temp;
+	struct dirent ** namelist;
+	int ret, i, j = 0;
+	int fd, fd2;
+	char *tempXmlList[ 10 ];
+	char *buffer;
+
+	strcpy( xmlFile, XML_DIRECTORY );
+	strcat( xmlFile, car_id );
+	strcat( xmlFile, ".xml" );
+	strcpy( tempFile, MAIN_DIRECTORY );
+	strcat( tempFile, car_id );
+	strcat( tempFile, "/" );
+
+	LOG( "Checking the files in", tempFile,"." );
+	if( ( i = ret = scandir( tempFile, &namelist, 0, alphasort ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( xmlFile );
+		free( tempFile );
+		return EXIT_FAILURE;
+	}
+
+	LOG( "Filtering the files." );
+	while( i-- )
+	{
+		if( checkXml( namelist[ i ] -> d_name ) )
+		{
+			LOG( "File found: '", namelist[ i ] -> d_name, "'." );
+			tempXmlList[ j++ ] = namelist[ i ] -> d_name;
+		}
+		else
+			LOG( "Ignoring file: '", namelist[ i ] -> d_name, "'." );
+
+	}
+	tempXmlList[ j ] = NULL;
+	temp = malloc( strlen( tempFile ) + 7 );
+	strcpy( temp, tempFile );
+	strcat( tempFile, "tmpxml" );
+
+	LOG( "Attempting to remove the temporary file: '", tempFile, "' in case it exists." );
+	unlink( tempFile );
+
+	LOG( "Creating and opening temporary file: '", tempFile, "'." );
+	if( ( fd = open( tempFile, O_WRONLY | O_CREAT, 0644 ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		free( xmlFile );
+		free( tempFile );
+		free( temp );
+		return EXIT_FAILURE;
+	}
+
+	LOG( "Starting Markers' wrapper." );
+	buffer = malloc( BUFFSIZ );
+	sprintf( buffer, "<markers>\n\n<marker lat=\"%lf\" lng=\"%lf\" html=\"Car speed = %lf\" />\n\n", newPoint.lat, newPoint.lng, newPoint.spd );
+	write( fd, buffer, strlen( buffer ) );
+
+	i = 0;
+	while( tempXmlList[ i++ ] != NULL )
+	{
+		LOG( "Reading file: '", tempXmlList[ i - 1 ], "'." );
+		strncpy( temp + strlen( tempFile ) - 6, tempXmlList[ i - 1], 7 );
+		LOG( temp );
+		if( ( fd2 = open( temp, O_RDONLY ) ) < 0 )
+		{
+			LOG( strerror( errno ) );
+			LOG( "Skipping file." );
+			continue;
+		}
+
+		LOG( "Copying data." );
+		while( ( ret = read( fd2, buffer, BUFFSIZ ) ) > 0)
+			write( fd, buffer, ret );
+
+		write( fd, "\n\n", 2 );
+
+		if( close( fd2 ) < 0 )
+		{
+			LOG( strerror( errno ) );
+			continue;
+		}
+	}
+	free( temp );
+	free( buffer );
+
+	LOG( "Closing Markers' wrapper." );
+	write( fd, "\n\n</markers>", 12 );
+
+	LOG( "Closing temporary file." );
+	if( close( fd ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		LOG( "Attempting to move the temporary file anyway." );
+	}
+
+	LOG( "Moving the temporary file to: '", xmlFile, "'." );
+	if( rename( tempFile, xmlFile ) < 0 )
+	{
+		LOG( strerror( errno ) );
+		LOG( "Couldn't create the xml file." );
+		free( tempFile );
+		free( xmlFile );
+		return EXIT_FAILURE;
+	}
+	LOG( "File updated successfully." );
+	free( tempFile );
+	free( xmlFile );
+	return EXIT_SUCCESS;
+}
+
+bool checkXml( char * name )
+{
+	for( int i = 0; i < strlen( name ); i++ )
+		if( !isdigit( name[ i ] ) )
+			return false;
+	return true;
 }

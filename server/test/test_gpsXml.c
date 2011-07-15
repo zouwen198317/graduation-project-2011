@@ -29,6 +29,7 @@ int main()
 
 	new_point.lng = 30.2133;
 	new_point.lat = 29.1234;
+	new_point.spd = 3.23;
 	addGpsPoint( new_point );
 
 	return EXIT_SUCCESS;
