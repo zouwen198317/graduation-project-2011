@@ -31,12 +31,31 @@
 #include <stdint.h>
 #include "gpsXml.h"
 #include <limits.h>
+#include <sys/stat.h>
+#include <signal.h>
 
 /* Definitions. */
 #define BUFFSIZ 1024
 #define CONNECTION_DELAY 5
 #define CONNECTION_ATTEMPTS 15
 #define PORT_TRANSMISSION_ATTEMPTS 5
+#define PID_FILE "/var/www/pid.text"
+#define FIFOLOCK "/var/www/lock"
+#define FIFOUNLOCK "/var/www/unlock"
+
+/* Typedefs. */
+typedef struct
+{
+	pid_t pid;
+	char car_id[20];
+	void *previous;
+	void *next;
+} id_element;
+
+/* Global variables. */
+int STREAM_socket = 0;
+id_element main_element;
+id_element *last_element = &main_element;
 
 /* Marcos. */
 #define LOG( ... ) log_write( "Communication process", __VA_ARGS__, NULL )
@@ -45,6 +64,9 @@
 /* Function prototypes. */
 void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t );
 void _string_analyze( char * buffer, int len );
+static void readFifos( int signum, siginfo_t *siginfo, void *context );
+static void lockCar( int signum, siginfo_t *siginfo, void *context );
+static void unlockCar( int signum, siginfo_t *siginfo, void *context );
 
 /* Functions. */
 int main( void )
@@ -55,12 +77,63 @@ int main( void )
 	char * buffer = malloc( BUFFSIZ );
 	socklen_t socket_len;
 	int optval = 1;
+	struct sigaction sigHandle;
 
-	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
-	{
+	main_element.pid = getpid();
+	strcpy( main_element.car_id, "NONE" );
+	main_element.previous = main_element.next = NULL;
+
+	LOG( "Writing the process ID in '", PID_FILE, "'." );
+	unlink( PID_FILE );
+	if( ( ret = open( PID_FILE, O_WRONLY | O_CREAT) ) < 0 )
 		LOG( strerror( errno ) );
-		exit( EXIT_FAILURE );
+	else
+	{
+		if( write( ret, itoa( getpid() ), strlen( itoa( getpid() ) ) ) < 0 )
+			LOG( strerror( errno ) );
+		close( ret );
 	}
+
+	LOG( "Creating lock FIFO file: '", FIFOLOCK, "'." );
+	if( mkfifo( FIFOLOCK, 0644) < 0 )
+		LOG( strerror( errno ) );
+
+	LOG( "Creating unlock FIFO file: '", FIFOLOCK, "'." );
+	if( mkfifo( FIFOUNLOCK, 0644) < 0 )
+		LOG( strerror( errno ) );
+
+	LOG( "Setting signal mask for signal 23." );
+	sigHandle.sa_sigaction = &readFifos;
+	sigemptyset( &sigHandle.sa_mask );
+	sigHandle.sa_flags = SA_SIGINFO;
+	if( ( sigaction( 23, &sigHandle, NULL ) ) < 0 )
+		LOG( "Failed to mask signal 23." );
+	else
+		LOG( "Signal 23 is masked successfully." );
+
+	LOG( "Setting signal mask for signal 21." );
+	sigHandle.sa_sigaction = &lockCar;
+	sigemptyset( &sigHandle.sa_mask );
+	sigHandle.sa_flags = SA_SIGINFO;
+	if( ( sigaction( 21, &sigHandle, NULL ) ) < 0 )
+		LOG( "Failed to mask signal 21." );
+	else
+		LOG( "Signal 21 is masked successfully." );
+
+	LOG( "Setting signal mask for signal 16." );
+	sigHandle.sa_sigaction = &unlockCar;
+	sigemptyset( &sigHandle.sa_mask );
+	sigHandle.sa_flags = SA_SIGINFO;
+	if( ( sigaction( 16, &sigHandle, NULL ) ) < 0 )
+		LOG( "Failed to mask signal 16." );
+	else
+		LOG( "Signal 16 is masked successfully." );
+
+
+
+
+	while( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
+		LOG( strerror( errno ) );
 	LOG( "DGRAM socket created successfully." );
 
 	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
@@ -99,10 +172,25 @@ int main( void )
 			init_connection_daemon( buffer, ret_saddr, socket_len );
 			LOG( "Self-terminating daemon with PID=", itoa( getpid() ), "." );
 			free( buffer );
+			pid_t pid = getpid();
+			for( id_element *temp = &main_element; temp != NULL; temp = temp -> next )
+				if( temp -> pid == pid )
+				{
+					( (id_element *)( temp -> previous ) ) -> next = temp -> next;
+					( (id_element *)( temp -> next ) ) -> previous = temp -> previous;
+					free( temp );
+					break;
+				}
+			/*TODO: updating database */
 			return EXIT_SUCCESS;
 		}
+		last_element -> next = malloc( sizeof( id_element ) );
+		( ( id_element *)( last_element -> next ) ) -> previous = last_element;
+		last_element = last_element -> next;
+		last_element -> next = NULL;
 	}
 
+	LOG( "Outside the main loop. Program flow is not supposed to reach here." );
 	close( my_socket );
 	free( buffer );
 	return EXIT_SUCCESS;
@@ -111,7 +199,7 @@ int main( void )
 
 void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t socket_len )
 {
-	int DGRAM_socket, STREAM_socket;
+	int DGRAM_socket;
 	int attempts = 0, attempts2 = 0;
 	int ret;
 	pid_t my_pid = getpid();
@@ -199,6 +287,7 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 			{
 				LOG( strerror( errno ) );
 				close( STREAM_socket );
+				STREAM_socket = 0;
 				free( read_buff );
 				return;
 			}
@@ -209,6 +298,7 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 
 	LOG( "Program flow got out of the reading loop." );
 	close( STREAM_socket );
+	STREAM_socket = 0;
 	free( read_buff );
 	return;
 }
@@ -276,4 +366,29 @@ void _string_analyze( char * buffer, int len )
 	}
 }
 
+static void lockCar( int signum, siginfo_t *siginfo, void *context )
+{
+	if( !STREAM_socket )
+		return;
+/*TODO*/
 
+
+}
+
+static void unlockCar( int signum, siginfo_t *siginfo, void *context )
+{
+	if( !STREAM_socket )
+		return;
+/*TODO*/
+
+
+}
+
+
+static void readFifos( int signum, siginfo_t *siginfo, void *context )
+{
+	LOG( "Received signal 23. Reading FIFO files." );
+	/* TODO */
+
+
+}

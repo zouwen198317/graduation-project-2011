@@ -36,6 +36,9 @@
 #define CAR_ID "TestID"
 #define SERVERNAME "127.0.0.1"//"e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
+#define PID_FILE "/var/www/pid.text"
+#define FIFOLOCK "/var/www/lock"
+#define FIFOUNLOCK "/var/www/unlock"
 
 /* Functions parameters. */
 struct sockaddr *getip( const char * );
