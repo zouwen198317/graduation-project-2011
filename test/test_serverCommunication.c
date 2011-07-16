@@ -23,7 +23,6 @@
 int main()
 {
 	connectToServer();
-
 	return 0;
 }
 

@@ -18,15 +18,12 @@
 
 /* Header files. */
 #include "gpsProcess.h"
-
-/* TODO: remove: */
-#include<stdio.h>
-
+#include "serverCommunication.h"
+#include "networkConstants.h"
 
 /* Definitions. */
 #define BAUDRATE	B9600
 #define GPSDEV		"/dev/ttyUSB0"
-
 
 /* Marcros. */
 #define LOG( ... )	log_write( "GPS Process", __VA_ARGS__, NULL )
@@ -34,14 +31,11 @@
 /* Function prototypes. */
 static void termHandle( int signum, siginfo_t *siginfo, void *context );
 
-
 /* Global variables. */
 int			gps_fd = 0;
 struct termios		oldTerm;
 
-
 /* Functions. */
-
 void gpsProcess()
 {
 	register int count;
@@ -64,9 +58,6 @@ void gpsProcess()
 	{
 		/* Error opening the device file. */
 		LOG( strerror( errno ) );
-		/* TODO:
-		 * Report error to display
-		 */
 		/* TODO:
 		 * Interrupt instead of poll
 		 */
@@ -100,13 +91,9 @@ void gpsProcess()
 		/* Parsing the valid data, and drop the invalid. */
 		if( !NMEARead( buff, &parsedData ) )
 		{
-			/* TODO: Remove: */
-			char	*timeString;
-			timeString = ctime(&(parsedData.timeAndDate));
-			timeString[ strlen( timeString ) - 1 ] = '\0';
-			printf( "%s:\t%lf\t%lf\t%lf\t%f.\n", timeString, parsedData.lat, parsedData.lon, parsedData.speed, parsedData.speedDirection );
-			/* TODO: send over the network. */
-			/* TODO: send to display if there's any. */
+			char buffer[ 40 ];
+			sprintf( buffer, "%lfX%lfX%lfX", parsedData.lon, parsedData.lat, parsedData.speed );
+			transmit( GPS_IDENT, buffer );
 		}
 	}
 

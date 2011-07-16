@@ -1,5 +1,5 @@
 /*
- * The network constants header file.
+ * The internet connector header file.
  * Copyright (C) 2011  Michael M. Behman (michael.behman@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,17 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NETWORK_CONSTANTS__
-#define __NETWORK_CONSTANTS__
+#ifndef __INTERNET_CONNECTOR__
+#define __INTERNET_CONNECTOR__
 
-/* Definitions. */
-#define IDENTIFICATION_PATTERN	"#3c4r1d3n74ndr3d1rm3@"
-#define INITPORT		6543
-#define NETWORK_BUFFER_SIZE	4096
-#define GPS_IDENT		1
-#define LOCK_IDENT		2
+/* Functions' prototypes. */
+void inetConnect();
 
-/* Macros. */
-#define _getsize( buffer )	(uint16_t)( (uint8_t)(buffer[1]) + 256 * (uint8_t)(buffer[0]) )
 
 #endif

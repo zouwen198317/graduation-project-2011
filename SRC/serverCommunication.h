@@ -28,6 +28,6 @@
 
 /* Functions prototypes. */
 int connectToServer( void );
-
+int transmit( unsigned char ident, char * msg );
 
 #endif

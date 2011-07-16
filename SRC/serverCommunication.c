@@ -36,12 +36,14 @@
 #define CAR_ID "TestID"
 #define SERVERNAME "127.0.0.1"//"e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
-#define PID_FILE "/var/www/pid.text"
-#define FIFOLOCK "/var/www/lock"
-#define FIFOUNLOCK "/var/www/unlock"
+
+/* Global Variables. */
+int STREAM_socket = 0;
 
 /* Functions parameters. */
 struct sockaddr *getip( const char * );
+void _string_analyze( char * buffer, int len );
+int transmit( unsigned char ident, char * msg );
 
 /* Macros. */
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
@@ -49,7 +51,7 @@ struct sockaddr *getip( const char * );
 /* Functions. */
 int connectToServer( void )
 {
-	int my_socket, my_socket2;
+	int STREAM_socket, STREAM_socket2;
 	int ret;
 	struct sockaddr_in saddr2, saddr3, ret_saddr;
 	struct sockaddr saddr;
@@ -59,7 +61,7 @@ int connectToServer( void )
 	struct timeval time_out; 
 	struct sockaddr *serverInfo = getip( SERVERNAME );
 	int optval = 1;
-
+	char * read_buff = malloc( NETWORK_BUFFER_SIZE );
 
 	if( serverInfo == NULL )
 	{
@@ -67,14 +69,14 @@ int connectToServer( void )
 		return EXIT_FAILURE;
 	}
 
-	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
+	if( ( STREAM_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		exit( EXIT_FAILURE );
 	}
 	LOG( "DGRAM socket created for transmission successfully." );
 
-	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+	if( setsockopt( STREAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
 		LOG( "Couldn't set socket to re-use address." );
 	else
 		LOG( "Socket set to re-use address successfully." );
@@ -86,13 +88,10 @@ int connectToServer( void )
 	{
 		while( 1 )
 		{
-//			saddr.sin_family = AF_INET;
-//			saddr.sin_addr.s_addr = inet_addr( serverIP );
-//			saddr.sin_port = htons( INITPORT );
 			memcpy( &saddr, serverInfo, sizeof( struct sockaddr ) );
 	
 			LOG( "Attempting to send identification pattern to server" );
-			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, &saddr, sizeof( struct sockaddr ) ) ) < 0 )
+			if(  ( ret = sendto( STREAM_socket, buffer, strlen( buffer ), 0, &saddr, sizeof( struct sockaddr ) ) ) < 0 )
 				LOG( strerror( errno ) );
 			else
 				break;
@@ -100,14 +99,14 @@ int connectToServer( void )
 		LOG( "Identification pattern sent to server." );
 	
 
-		if( ( my_socket2 = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
+		if( ( STREAM_socket2 = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 		{
 			LOG( strerror( errno ) );
 			exit( EXIT_FAILURE );
 		}
 		LOG( "DGRAM socket created for receiving successfully." );
 
-		if( setsockopt( my_socket2, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+		if( setsockopt( STREAM_socket2, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
 			LOG( "Couldn't set socket to re-use address." );
 		else
 			LOG( "Socket set to re-use address successfully." );
@@ -116,7 +115,7 @@ int connectToServer( void )
 		saddr2.sin_port = htons( INITPORT );
 		saddr2.sin_addr.s_addr = htonl( INADDR_ANY );
 
-		if( bind( my_socket2, (struct sockaddr *) &saddr2, sizeof( struct sockaddr ) ) < 0 )
+		if( bind( STREAM_socket2, (struct sockaddr *) &saddr2, sizeof( struct sockaddr ) ) < 0 )
 		{
 			LOG( strerror( errno ) );
 			exit( EXIT_FAILURE );
@@ -125,11 +124,11 @@ int connectToServer( void )
 
 		socket_len = sizeof( ret_saddr );
 		FD_ZERO( &rfds );
-		FD_SET( my_socket2, &rfds );
+		FD_SET( STREAM_socket2, &rfds );
 		time_out.tv_sec = SERVER_TIMEOUT;
 		time_out.tv_usec = 0;
 		LOG( "Waiting for server to reply." );
-		ret = select( my_socket2 + 1, &rfds, NULL, NULL, &time_out );
+		ret = select( STREAM_socket2 + 1, &rfds, NULL, NULL, &time_out );
 		if( ret < 0 )
 		{
 			LOG( strerror( errno ) );
@@ -141,7 +140,7 @@ int connectToServer( void )
 			LOG( "Retrying..." );
 			continue;
 		}
-		if( ( ret = recvfrom( my_socket2, buffer, BUFFSIZ, 0, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
+		if( ( ret = recvfrom( STREAM_socket2, buffer, BUFFSIZ, 0, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
 			LOG( strerror( errno ) );
 		else
 			break;
@@ -149,15 +148,15 @@ int connectToServer( void )
 	buffer[ ret ] = '\0';
 	LOG( "Server replied:\'", buffer, "\'." );
 
-	close( my_socket );
-	if( ( my_socket = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
+	close( STREAM_socket );
+	if( ( STREAM_socket = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		exit( EXIT_FAILURE );
 	}
 	LOG( "STREAM socket created successfully." );
 
-	if( setsockopt( my_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
+	if( setsockopt( STREAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
 		LOG( "Couldn't set socket to re-use address." );
 	else
 		LOG( "Socket set to re-use address successfully." );
@@ -166,14 +165,14 @@ int connectToServer( void )
 	saddr3.sin_addr.s_addr = inet_addr( "127.0.0.1" );
 	saddr3.sin_port = htons( atoi( buffer ) );
 
-	while( bind( my_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
+	while( bind( STREAM_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		sleep( 1 );
 	}
 	LOG( "STREAM socket bound successfully." );
 
-	while( listen( my_socket, 1 ) < 0 )
+	while( listen( STREAM_socket, 1 ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		sleep( 1 );
@@ -181,18 +180,41 @@ int connectToServer( void )
 	LOG( "Listening to the given port and waiting for the incoming connection." );
 
 	socket_len = sizeof( ret_saddr );
-	if( ( ret = accept( my_socket, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
+	if( ( ret = accept( STREAM_socket, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		sleep( 1 );
 	}
-	LOG( "Connection accepted." );
+	LOG( "Connection accepted. Starting reading loop." );
 
+	free( buffer );
 
+	while( 1 )
+	{
+		if( ( ret = read( STREAM_socket, read_buff, NETWORK_BUFFER_SIZE ) ) < 0 )
+		{
+			if( errno != EINTR )
+			{
+				LOG( strerror( errno ) );
+				close( STREAM_socket );
+				STREAM_socket = 0;
+				free( read_buff );
+				return EXIT_FAILURE;
+			}
+			else
+				continue;
+		}
+		read_buff[ ret ] = '\0';
+		LOG( "Received data: '", read_buff, "'." );
+		_string_analyze( read_buff, ret );
+	}
 
-	close( my_socket );
+	LOG( "Program flow got out of the reading loop." );
+	close( STREAM_socket );
+	STREAM_socket = 0;
+	free( read_buff );
+	return EXIT_SUCCESS;
 
-	return 0;
 }
 
 
@@ -246,3 +268,69 @@ struct sockaddr *getip( const char *domainName )
 	LOG( "A valid address is found: ", inet_ntoa( ( ( struct sockaddr_in *)saddr ) -> sin_addr ), " ." );
 	return saddr;
 }
+
+
+void _string_analyze( char * buffer, int len )
+{
+	unsigned char ident = buffer[0];
+	buffer++;
+	uint16_t size = _getsize( buffer );
+
+	buffer += 2;
+
+	if( strlen( buffer ) > size )
+		LOG( "Extra data transmitted. Continuing..." );
+	else if( strlen( buffer ) < size )
+	{
+		LOG( "Insuffucient data transmitted. Dropping data..." );
+		return;
+	}
+
+	switch( ident )
+	{
+		case LOCK_IDENT:
+		{
+			switch( buffer[ 0 ] )
+			{
+				case 0:
+					/* TODO: lockcar*/
+					break;
+				case 1:
+					/* TODO: unlockcar*/
+					break;
+			}
+			break;
+		}
+		default:
+			LOG( "Failed to identify data. Dropping." );
+	}
+}
+
+int transmit( unsigned char ident, char * msg )
+{
+	char * buffer = malloc( 1 + 2 + strlen( msg ) + 1);
+	int ret;
+	uint16_t size = strlen( msg );
+
+	if( !STREAM_socket )
+		return EXIT_FAILURE;
+	buffer[ 0 ] = ident;
+	buffer[ 2 ] = size / 256;
+	buffer[ 1 ] = size % 256;
+	strncpy( buffer + 3, msg, strlen( buffer ) - 4 );
+
+	ret = write( STREAM_socket, buffer, strlen( buffer ) ); 
+	if( ret < 0 )
+	{
+		LOG( strerror( errno ) );
+		return EXIT_FAILURE;
+	}
+	else if( ret != strlen( buffer ) )
+	{
+		LOG( "Warning: not the whole buffer was transmitted." );
+		return EXIT_FAILURE;
+	}
+	LOG( "Buffer transmitted successfully." );
+	return EXIT_SUCCESS;
+}
+

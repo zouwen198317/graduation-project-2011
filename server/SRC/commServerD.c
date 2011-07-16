@@ -67,6 +67,8 @@ void _string_analyze( char * buffer, int len );
 static void readFifos( int signum, siginfo_t *siginfo, void *context );
 static void lockCar( int signum, siginfo_t *siginfo, void *context );
 static void unlockCar( int signum, siginfo_t *siginfo, void *context );
+int transmit( unsigned char ident, char * msg );
+pid_t pidof( char * );
 
 /* Functions. */
 int main( void )
@@ -78,6 +80,13 @@ int main( void )
 	socklen_t socket_len;
 	int optval = 1;
 	struct sigaction sigHandle;
+
+	/* Initializing the logger. */
+	LOG( "Initializing the log." );
+	/* If log wasn't initialized successfully. */
+	if( ret = log_init( LOGFILE ) )
+		LOG( strerror( ret ) );
+
 
 	main_element.pid = getpid();
 	strcpy( main_element.car_id, "NONE" );
@@ -128,9 +137,6 @@ int main( void )
 		LOG( "Failed to mask signal 16." );
 	else
 		LOG( "Signal 16 is masked successfully." );
-
-
-
 
 	while( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 		LOG( strerror( errno ) );
@@ -283,6 +289,7 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 	while( 1 )
 	{
 		if( ( ret = read( STREAM_socket, read_buff, NETWORK_BUFFER_SIZE ) ) < 0 )
+		{
 			if( errno != EINTR )
 			{
 				LOG( strerror( errno ) );
@@ -291,6 +298,9 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 				free( read_buff );
 				return;
 			}
+			else
+				continue;
+		}
 		read_buff[ ret ] = '\0';
 		LOG( "Received data: '", read_buff, "'." );
 		_string_analyze( read_buff, ret );
@@ -308,9 +318,9 @@ void _string_analyze( char * buffer, int len )
 {
 	unsigned char ident = buffer[0];
 	buffer++;
-	uint32_t size = _getsize( buffer );
+	uint16_t size = _getsize( buffer );
 
-	buffer += 4;
+	buffer += 2;
 
 	if( strlen( buffer ) > size )
 		LOG( "Extra data transmitted. Continuing..." );
@@ -337,7 +347,7 @@ void _string_analyze( char * buffer, int len )
 				return;
 			}
 			LOG( "Longitude fetched." );
-			lat = strtol( temp, &buffer, 10 );
+			lat = strtol( ++temp, &buffer, 10 );
 			if( lat == LONG_MAX || lat == LONG_MIN )
 			{
 				LOG( strerror( errno ) );
@@ -345,7 +355,7 @@ void _string_analyze( char * buffer, int len )
 				return;
 			}
 			LOG( "Latitude fetched." );
-			spd = strtol( buffer, &temp, 10 );
+			spd = strtol( ++buffer, &temp, 10 );
 			if( spd == LONG_MAX || spd == LONG_MIN )
 			{
 				LOG( strerror( errno ) );
@@ -370,25 +380,91 @@ static void lockCar( int signum, siginfo_t *siginfo, void *context )
 {
 	if( !STREAM_socket )
 		return;
-/*TODO*/
-
-
+	if( transmit( LOCK_IDENT, "0" ) == EXIT_FAILURE )
+	{
+		LOGd( getpid(), "Failed to transmit unlock signal." );
+	}
+	else
+	{
+		LOGd( getpid(), "Unlock signal transmitted successfully." );
+	}
 }
 
 static void unlockCar( int signum, siginfo_t *siginfo, void *context )
 {
 	if( !STREAM_socket )
 		return;
-/*TODO*/
-
-
+	if( transmit( LOCK_IDENT, "1" ) == EXIT_FAILURE )
+	{
+		LOGd( getpid(), "Failed to transmit lock signal." );
+	}
+	else
+	{
+		LOGd( getpid(), "Lock signal transmitted successfully." );
+	}
 }
 
 
 static void readFifos( int signum, siginfo_t *siginfo, void *context )
 {
+	FILE *fd;
+	char carid[ 20 ];
 	LOG( "Received signal 23. Reading FIFO files." );
-	/* TODO */
+	LOG( "Reading lock FIFO file." );
+	if( ( fd = fopen( FIFOLOCK, O_RDONLY ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+	}
+	else
+	{
+		while( fscanf( fd, "%s-", carid ) != EOF )
+			kill( pidof( carid ), 21 );
+		fclose( fd );
+	}
 
+	LOG( "Reading unlock FIFO file." );
+	if( ( fd = fopen( FIFOUNLOCK, O_RDONLY ) ) < 0 )
+	{
+		LOG( strerror( errno ) );
+	}
+	else
+	{
+		while( fscanf( fd, "%s-", carid ) != EOF )
+			kill( pidof( carid ), 16 );
+		fclose( fd );
+	}
+}
 
+int transmit( unsigned char ident, char * msg )
+{
+	char * buffer = malloc( 1 + 2 + strlen( msg ) + 1);
+	int ret;
+	uint16_t size = strlen( msg );
+
+	buffer[ 0 ] = ident;
+	buffer[ 2 ] = size / 256;
+	buffer[ 1 ] = size % 256;
+	strncpy( buffer + 3, msg, strlen( buffer ) - 4 );
+
+	ret = write( STREAM_socket, buffer, strlen( buffer ) ); 
+	if( ret < 0 )
+	{
+		LOG( strerror( errno ) );
+		return EXIT_FAILURE;
+	}
+	else if( ret != strlen( buffer ) )
+	{
+		LOG( "Warning: not the whole buffer was transmitted." );
+		return EXIT_FAILURE;
+	}
+	LOG( "Buffer transmitted successfully." );
+	return EXIT_SUCCESS;
+}
+
+pid_t pidof( char * carid )
+{
+	for( id_element *temp = &main_element; temp != NULL; temp = temp -> next )
+		if( strcmp( temp -> car_id, carid ) == 0 )
+			return temp -> pid;
+	return -1;
 }
