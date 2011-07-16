@@ -5,8 +5,8 @@ EXTRA_PATH := ..\/test_bin\/extra\/
 SRC_PATH := ..\/SRC\/
 
 # Global Variables
-OBJECTS := test_gpsParser.o test_gpsProcess.o test_logger.o test_sms.o test_serverCommunication.o
-EXECUTABLES := gpsParser gpsProcess logger sms serverCommunication
+OBJECTS := test_gpsParser.o test_gpsProcess.o test_logger.o test_sms.o test_serverCommunication.o test_internetConnector.o
+EXECUTABLES := gpsParser gpsProcess logger sms serverCommunication internetConnector
 EXTRA := gps_sample.out logfile gpsProcessTestLog
 
 # Dependencies
@@ -15,3 +15,4 @@ gpsProcess_DEP += gpsProcess.o logger.o
 logger_DEP += logger.o
 sms_DEP += sms.o
 serverCommunication_DEP += serverCommunication.o
+internetConnector_DEP += internetConnector.o
