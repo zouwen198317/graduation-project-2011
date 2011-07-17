@@ -34,7 +34,7 @@
 /* Definitions. */
 #define BUFFSIZ 1024
 #define CAR_ID "TestID"
-#define SERVERNAME "127.0.0.1"//"e-car.dyndns.org"
+#define SERVERNAME "e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
 
 /* Global Variables. */
@@ -42,6 +42,7 @@ int STREAM_socket = 0;
 
 /* Functions parameters. */
 struct sockaddr *getip( const char * );
+void _string_analyze( char * buffer, int len );
 
 /* Macros. */
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
@@ -58,6 +59,8 @@ int connectToServer( void )
 	fd_set rfds;
 	struct timeval time_out; 
 	struct sockaddr *serverInfo = getip( SERVERNAME );
+	int optval = 1;
+	char * read_buff = malloc( NETWORK_BUFFER_SIZE );
 
 	if( serverInfo == NULL )
 	{
@@ -65,7 +68,7 @@ int connectToServer( void )
 		return EXIT_FAILURE;
 	}
 
-	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
+	if( ( STREAM_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOG( "Could not resolve server's domain name." );
 		return EXIT_FAILURE;
@@ -95,7 +98,7 @@ int connectToServer( void )
 //			saddr.sin_port = htons( INITPORT );
 	
 			LOG( "Attempting to send identification pattern to server" );
-			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, serverInfo, sizeof( struct sockaddr ) ) ) < 0 )
+			if(  ( ret = sendto( STREAM_socket, buffer, strlen( buffer ), 0, serverInfo, sizeof( struct sockaddr ) ) ) < 0 )
 				LOG( strerror( errno ) );
 			else
 				break;
@@ -227,7 +230,8 @@ struct sockaddr *getip( const char *domainName )
 	struct addrinfo *info, *temp;
 	int ret, sockfd;
 	struct sockaddr *saddr;
-		
+	int optval = 1;
+
 	if( ( ret = getaddrinfo( domainName, itoa(INITPORT), NULL, &info ) ) != 0 )
 	{
 		LOG( gai_strerror( ret ) );

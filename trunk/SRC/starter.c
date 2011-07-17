@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <stdbool.h>
+#include "internetConnector.h"
+#include "serverCommunication.h"
 /* End of Header files. */
 
 
@@ -39,8 +41,10 @@
 /* LOG definitions. */
 #define LOGFILE				"Logfile"
 /* Processes definitions. */
-#define	PROC_NUM			2
+#define	PROC_NUM			4
 #define PROC_GPS			0
+#define PROC_CONNECTOR			1
+#define PROC_COMM			2
 /* End of Definitions. */
 
 
@@ -48,20 +52,18 @@
 /* LOG macros. */
 #define RAW_LOG( x, ...) 		log_write( x, __VA_ARGS__, NULL )
 #define LOG( ... ) 			log_write( "Main parent", __VA_ARGS__, NULL )
-/* procID translator macros. */
-#define procID2Name( PROC_GPS )		"GPS Process"
-/* processes translator macros. */
-#define execProc( PROC_GPS )		gpsProcess()
 /* End of Macros. */
 
 
 /* Functions' prototypes. */
 /* TODO: Inlining. */
-inline void forkAndExec( int proc );
+inline int forkAndExec( int proc );
 inline void cleanAndExit( int status );
 inline void killProc( int procID, KP_MODE mode );
 inline void killAll();
 static void childDied( int signum, siginfo_t *siginfo, void *context );
+char *procID2Name( int procID );
+void execProc( int procID );
 /* End of Functions' prototypes. */
 
 
@@ -100,8 +102,13 @@ int main()
 
 
 	/* Starting the forking phase. */
+	forkAndExec( PROC_CONNECTOR );
+	forkAndExec( PROC_COMM );
 	/* Forking GPS process. */
 	forkAndExec( PROC_GPS );
+
+	while( 1 )
+		pause();
 
 	LOG( "Parent process will sleep for 30 seconds." );
 	sleep( 30 );
@@ -110,7 +117,7 @@ int main()
 	cleanAndExit( EXIT_SUCCESS );
 }
 
-void forkAndExec( int procID )
+int forkAndExec( int procID )
 {
 	int ret_err;
 	pid_t cpid = fork();
@@ -121,7 +128,7 @@ void forkAndExec( int procID )
 		LOG( "Process failed to fork." );
 		LOG( strerror( ret_err ) );
 		LOG( "Fatal error, quiting." );
-		cleanAndExit( EXIT_FAILURE );
+		return EXIT_FAILURE;
 	}
 	if( !cpid )
 	{
@@ -131,13 +138,14 @@ void forkAndExec( int procID )
 		execProc( procID );
 		/* Process exited. */
 		RAW_LOG( procID2Name( procID ), "W: Unexpected behaviour: Child process returned." );
-		exit( EXIT_FAILURE );
+		return EXIT_FAILURE;
 	}
 
 	/* Updating processesDB. */
 	LOG( "Process forked successfully. Adding process to DB." );
 	processesDB[ procID ] = cpid;
 	processesCount++;
+	return EXIT_SUCCESS;
 
 }
 
@@ -177,10 +185,14 @@ static void childDied( int signum, siginfo_t *siginfo, void *context )
 		if( processesDB[ i ] == cpid )
 		{
 			/* Process identified, updating DB. */
-			LOG( "Dead child identified as: ", procID2Name( i ) ) ;
-			processesDB[ i ] = 0;
-			processesCount--;
-			LOG( "ProcessesDB updated." );
+			LOG( "Dead child identified as: ", procID2Name( i ), ". Attempting to re-excute it." ) ;
+			if( forkAndExec( i ) == EXIT_FAILURE )
+			{
+				LOG( "Failed to execute." );
+				processesDB[ i ] = 0;
+				processesCount--;
+				LOG( "ProcessesDB updated." );
+			}
 			return;
 		}
 	LOG( "W: Failed to identify dead child. (PID = ", cpid, ")" );
@@ -192,7 +204,7 @@ void killProc( int procID, KP_MODE mode )
 	while( processesDB[ procID ] )
 	{
 		/* Send SIGTERM to the process. */
-		LOG( "Sending SIGTERM to process: ", procID2Name( i ) );
+		LOG( "Sending SIGTERM to process: ", procID2Name( procID ) );
 		kill( processesDB[ procID ], SIGTERM );
 		/* Return immediately, if the mode is set to non-block. */
 		if( mode == KP_NBLOCK )
@@ -205,4 +217,40 @@ void killProc( int procID, KP_MODE mode )
 		alarm( 2 );
 		waitpid( processesDB[ procID ], NULL, 0 );
 	}
+}
+
+
+char *procID2Name( int procID )
+{
+	switch( procID )
+	{
+		case PROC_GPS:
+			return "GPS process";
+		case PROC_CONNECTOR:
+			return "Internet connector process";
+		case PROC_COMM:
+			return "Server communication process";
+		default:
+			return "Unkown Process";
+	}
+}
+
+
+void execProc( int procID )
+{
+	switch( procID )
+	{
+		case PROC_GPS:
+			gpsProcess();
+			break;
+		case PROC_CONNECTOR:
+			inetConnect();
+			break;
+		case PROC_COMM:
+			connectToServer();
+			break;
+		default:
+			LOG( "Trying to execute an unkown process." );
+	}
+	return;
 }
