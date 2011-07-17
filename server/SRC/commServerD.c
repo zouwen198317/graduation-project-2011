@@ -33,6 +33,9 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <stdio.h>
+#include "ports.h"
+#include <mysql.h>
 
 /* Definitions. */
 #define BUFFSIZ 1024
@@ -42,12 +45,14 @@
 #define PID_FILE "/var/www/pid.text"
 #define FIFOLOCK "/var/www/lock"
 #define FIFOUNLOCK "/var/www/unlock"
+#define LOGFILE "logfile"
 
 /* Typedefs. */
 typedef struct
 {
 	pid_t pid;
 	char car_id[20];
+	uint16_t port;
 	void *previous;
 	void *next;
 } id_element;
@@ -86,7 +91,6 @@ int main( void )
 	/* If log wasn't initialized successfully. */
 	if( ret = log_init( LOGFILE ) )
 		LOG( strerror( ret ) );
-
 
 	main_element.pid = getpid();
 	strcpy( main_element.car_id, "NONE" );
@@ -212,17 +216,61 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 	LOG( "Daemon created with pid=", itoa( my_pid ), "." );
 	int optval = 1;
 	char * read_buff = malloc( NETWORK_BUFFER_SIZE );
+	MYSQL *mysqldb;
+	MYSQL_RES *query_result;
+	MYSQL_ROW row;
+	char query[ 128 ];
+	uint16_t port;
 
 	if( strncmp( buffer, IDENTIFICATION_PATTERN, strlen( IDENTIFICATION_PATTERN ) ) != 0 )
 	{
 		LOGd( my_pid, "Pattern doesn't match." );
 		return;
 	}
-	LOGd( my_pid, "Pattern matched successfully. Checking car state." );
-	/* TODO: Check user existance and state. */
-	/* TODO: Check port lists and pick a free one. */
+	LOGd( my_pid, "Pattern matched successfully. Looking for car ID in the database." );
 
-LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
+	mysqldb = mysql_init( NULL );
+	if( !mysql_real_connect( mysqldb, "localhost", "root", "rootpass", "login", 0, NULL, 0 ) )
+	{
+		LOGd( my_pid, mysql_error( mysqldb ) );
+		return ;
+	}
+
+	sprintf( query, "SELECT * FROM Customer WHERE car='%s'", buffer + strlen( IDENTIFICATION_PATTERN ) );
+	if( mysql_query( mysqldb, query ) != 0 )
+	{
+		LOGd( my_pid, mysql_error( mysqldb ) );
+		LOGd( my_pid, "Could not query database" );
+		return;
+	}
+		
+	query_result = mysql_store_result( mysqldb );
+	if( !( row = mysql_fetch_row( query_result ) ) )
+	{
+		LOGd( my_pid, "Car ID '", buffer + strlen( IDENTIFICATION_PATTERN ), "' was not found in the database. Dropping..." );
+		return;
+	}
+	LOGd( my_pid, "Car ID '", buffer + strlen( IDENTIFICATION_PATTERN ), "' found in the database. Updating with the new IP." );
+
+	sprintf( query, "UPDATE Customer Set ip='%s' WHERE car='%s'", inet_ntoa( saddr.sin_addr ), buffer + strlen( IDENTIFICATION_PATTERN ) );
+	if( mysql_query( mysqldb, query ) != 0 )
+	{
+		LOGd( my_pid, mysql_error( mysqldb ) );
+		LOGd( my_pid, "Could not query (update) database" );
+		return;
+	}
+
+	mysql_free_result( query_result );
+	mysql_close( mysqldb );
+
+	port = ports_list[ --ports_count ];
+	for( id_element *temp = last_element; temp != NULL; temp = temp -> previous )
+		if( !strcmp( temp -> car_id, buffer + strlen( IDENTIFICATION_PATTERN ) ) )
+		{
+			temp -> port = port;
+			break;
+		}
+
 	if( ( DGRAM_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOGd( my_pid, strerror( errno ) );
@@ -238,7 +286,7 @@ LOG( inet_ntoa( saddr.sin_addr ) ); /* TODO: Remove and store IP. */
 	while( 1 )
 	{
 		saddr.sin_port = htons( INITPORT );
-		while( ( sendto( DGRAM_socket, "7654" /* TODO: variable port.*/, 4/* TODO: strlen( buffer )*/, 0, (struct sockaddr *) &saddr, socket_len ) < 0 ) && attempts < PORT_TRANSMISSION_ATTEMPTS )
+		while( ( sendto( DGRAM_socket, itoa( port ), strlen( itoa( port ) ), 0, (struct sockaddr *) &saddr, socket_len ) < 0 ) && attempts < PORT_TRANSMISSION_ATTEMPTS )
 		{
 			LOGd( my_pid, strerror( errno ) );
 			attempts++;

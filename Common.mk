@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 CC := gcc
-CFLAGS := -std=gnu99
+CFLAGS := -std=gnu99 `mysql_config --cflags` -L/usr/lib/mysql -lmysqlclient
 
 ifeq "$(DEBUG)" "on"
 	CFLAGS += -g -Wall -Winline

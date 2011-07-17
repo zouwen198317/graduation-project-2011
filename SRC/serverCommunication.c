@@ -42,8 +42,6 @@ int STREAM_socket = 0;
 
 /* Functions parameters. */
 struct sockaddr *getip( const char * );
-void _string_analyze( char * buffer, int len );
-int transmit( unsigned char ident, char * msg );
 
 /* Macros. */
 #define LOG( ... ) log_write( "Communication Process", __VA_ARGS__, NULL )
@@ -60,10 +58,14 @@ int connectToServer( void )
 	fd_set rfds;
 	struct timeval time_out; 
 	struct sockaddr *serverInfo = getip( SERVERNAME );
-	int optval = 1;
-	char * read_buff = malloc( NETWORK_BUFFER_SIZE );
 
 	if( serverInfo == NULL )
+	{
+		LOG( "Could not resolve server's domain name." );
+		return EXIT_FAILURE;
+	}
+
+	if( ( my_socket = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 )
 	{
 		LOG( "Could not resolve server's domain name." );
 		return EXIT_FAILURE;
@@ -88,10 +90,12 @@ int connectToServer( void )
 	{
 		while( 1 )
 		{
-			memcpy( &saddr, serverInfo, sizeof( struct sockaddr ) );
+//			saddr.sin_family = AF_INET;
+//			saddr.sin_addr.s_addr = inet_addr( serverIP );
+//			saddr.sin_port = htons( INITPORT );
 	
 			LOG( "Attempting to send identification pattern to server" );
-			if(  ( ret = sendto( STREAM_socket, buffer, strlen( buffer ), 0, &saddr, sizeof( struct sockaddr ) ) ) < 0 )
+			if(  ( ret = sendto( my_socket, buffer, strlen( buffer ), 0, serverInfo, sizeof( struct sockaddr ) ) ) < 0 )
 				LOG( strerror( errno ) );
 			else
 				break;
@@ -223,8 +227,7 @@ struct sockaddr *getip( const char *domainName )
 	struct addrinfo *info, *temp;
 	int ret, sockfd;
 	struct sockaddr *saddr;
-	int optval = 1;
-
+		
 	if( ( ret = getaddrinfo( domainName, itoa(INITPORT), NULL, &info ) ) != 0 )
 	{
 		LOG( gai_strerror( ret ) );

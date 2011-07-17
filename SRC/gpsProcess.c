@@ -58,9 +58,7 @@ void gpsProcess()
 	{
 		/* Error opening the device file. */
 		LOG( strerror( errno ) );
-		/* TODO:
-		 * Interrupt instead of poll
-		 */
+		/* TODO: Interrupt instead of poll. */
 		sleep(1);
 	}
 
