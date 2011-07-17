@@ -130,7 +130,6 @@ void forkAndExec( int procID )
 		RAW_LOG( "New Born child process", "Starting child process: ", procID2Name( procID ) ) ;
 		execProc( procID );
 		/* Process exited. */
-		/* TODO: not supposed to get back here. */
 		RAW_LOG( procID2Name( procID ), "W: Unexpected behaviour: Child process returned." );
 		exit( EXIT_FAILURE );
 	}

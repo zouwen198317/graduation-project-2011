@@ -4,7 +4,7 @@
 
 /* Definitions. */
 #define BAUDRATE	B115200
-#define MDMDEV		"/dev/ttyUSB0"
+#define MDMDEV		"/dev/ttyUSB2"
 #define LOG( ... )	log_write( "SMS", __VA_ARGS__, NULL )
 
 /* Function prototypes. */
@@ -24,9 +24,6 @@ int send_sms( char *number, char *message_body )
 	{
 		/* Error opening the device file. */
 		LOG( strerror( errno ) ) ;
-		/* TODO:
-		 * Report error to display
-		 */
 		sleep(1);
 	}
 
