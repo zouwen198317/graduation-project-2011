@@ -191,7 +191,6 @@ int main( void )
 					free( temp );
 					break;
 				}
-			/*TODO: updating database */
 			return EXIT_SUCCESS;
 		}
 		last_element -> next = malloc( sizeof( id_element ) );
@@ -279,9 +278,13 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 	LOGd( my_pid, "DGRAM socket created successfully." );
 
 	if( setsockopt( DGRAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
-		LOG( "Couldn't set socket to re-use address." );
+	{
+		LOGd( my_pid, "Couldn't set socket to re-use address." );
+	}
 	else
-		LOG( "Socket set to re-use address successfully." );
+	{
+		LOGd( my_pid, "Socket set to re-use address successfully." );
+	}
 
 	while( 1 )
 	{
@@ -296,7 +299,7 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 			LOGd( my_pid, "Cannot reply to car." );
 			return;
 		}
-		LOGd( my_pid, "Port sent to car." );
+		LOGd( my_pid, "Port ", itoa( port ), " sent to car." );
 		
 		LOGd( my_pid, "Sleeping for ", itoa( CONNECTION_DELAY ), " seconds to allow time for the car to listen to the port." );
 		sleep( CONNECTION_DELAY );
@@ -309,11 +312,15 @@ void init_connection_daemon( char * buffer, struct sockaddr_in saddr, socklen_t 
 		LOGd( my_pid, "STREAM socket created successfully." );
 
 		if( setsockopt( STREAM_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval ) < 0 )
-			LOG( "Couldn't set socket to re-use address." );
+		{
+			LOGd( my_pid, "Couldn't set socket to re-use address." );
+		}
 		else
-			LOG( "Socket set to re-use address successfully." );
+		{
+			LOGd( my_pid, "Socket set to re-use address successfully." );
+		}
 	
-		saddr.sin_port = htons( atoi( "7654" /* TODO:Change with variable port. */ ) );
+		saddr.sin_port = htons( port );
 		LOGd( my_pid, "Connecting to car." );
 		if( ( connect( STREAM_socket, (struct sockaddr *) &saddr, sizeof( struct sockaddr ) ) < 0 ) && ( attempts2 <  CONNECTION_ATTEMPTS ) )
 		{

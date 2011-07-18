@@ -54,12 +54,13 @@ void gpsProcess()
 		LOG( "SIGTERM mask is set." );
 
 	/* Opening GPS device (serial terminal) for reading. */
-	while( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
+	if( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
 	{
 		/* Error opening the device file. */
 		LOG( strerror( errno ) );
 		/* TODO: Interrupt instead of poll. */
-		sleep(1);
+		while( ( gps_fd = open( GPSDEV, O_RDONLY | O_NOCTTY ) ) < 0 )
+			sleep(1);
 	}
 
 	/* Storing old terminal settings. */

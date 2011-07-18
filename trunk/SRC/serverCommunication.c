@@ -34,7 +34,7 @@
 /* Definitions. */
 #define BUFFSIZ 1024
 #define CAR_ID "TestID"
-#define SERVERNAME "e-car.dyndns.org"
+#define SERVERNAME "10.0.0.100"//"e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
 
 /* Global Variables. */
@@ -169,9 +169,8 @@ int connectToServer( void )
 		LOG( "Socket set to re-use address successfully." );
 
 	saddr3.sin_family = AF_INET;
-	saddr3.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	saddr3.sin_addr.s_addr = htonl( INADDR_ANY );
 	saddr3.sin_port = htons( atoi( buffer ) );
-
 	while( bind( STREAM_socket, (struct sockaddr *) &saddr3, sizeof( struct sockaddr ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
@@ -192,9 +191,11 @@ int connectToServer( void )
 		LOG( strerror( errno ) );
 		sleep( 1 );
 	}
+LOG( strerror( errno ) );
+
 	LOG( "Connection accepted. Starting reading loop." );
 
-	free( buffer );
+//	free( buffer );
 
 	while( 1 )
 	{
@@ -203,10 +204,11 @@ int connectToServer( void )
 			if( errno != EINTR )
 			{
 				LOG( strerror( errno ) );
-				close( STREAM_socket );
-				STREAM_socket = 0;
-				free( read_buff );
-				return EXIT_FAILURE;
+				//close( STREAM_socket );
+				//STREAM_socket = 0;
+				//free( read_buff );
+				//return EXIT_FAILURE;
+				continue;
 			}
 			else
 				continue;
