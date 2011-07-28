@@ -34,7 +34,7 @@
 /* Definitions. */
 #define BUFFSIZ 1024
 #define CAR_ID "TestID"
-#define SERVERNAME "10.0.0.100"//"e-car.dyndns.org"
+#define SERVERNAME "e-car.dyndns.org"
 #define SERVER_TIMEOUT 15
 
 /* Global Variables. */
@@ -155,7 +155,7 @@ int connectToServer( void )
 	buffer[ ret ] = '\0';
 	LOG( "Server replied:\'", buffer, "\'." );
 
-	close( STREAM_socket );
+	close( STREAM_socket2 );
 	if( ( STREAM_socket = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
@@ -186,7 +186,7 @@ int connectToServer( void )
 	LOG( "Listening to the given port and waiting for the incoming connection." );
 
 	socket_len = sizeof( ret_saddr );
-	if( ( ret = accept( STREAM_socket, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
+	if( ( STREAM_socket2 = accept( STREAM_socket, (struct sockaddr *) &ret_saddr, &socket_len ) ) < 0 )
 	{
 		LOG( strerror( errno ) );
 		sleep( 1 );
@@ -195,16 +195,17 @@ LOG( strerror( errno ) );
 
 	LOG( "Connection accepted. Starting reading loop." );
 
-//	free( buffer );
+	free( buffer );
 
 	while( 1 )
 	{
-		if( ( ret = read( STREAM_socket, read_buff, NETWORK_BUFFER_SIZE ) ) < 0 )
+		if( ( ret = read( STREAM_socket2, read_buff, NETWORK_BUFFER_SIZE ) ) < 0 )
 		{
 			if( errno != EINTR )
 			{
 				LOG( strerror( errno ) );
 				//close( STREAM_socket );
+				//close( STREAM_socket2 );
 				//STREAM_socket = 0;
 				//free( read_buff );
 				//return EXIT_FAILURE;
@@ -220,6 +221,7 @@ LOG( strerror( errno ) );
 
 	LOG( "Program flow got out of the reading loop." );
 	close( STREAM_socket );
+	close( STREAM_socket2 );
 	STREAM_socket = 0;
 	free( read_buff );
 	return EXIT_SUCCESS;

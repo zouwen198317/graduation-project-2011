@@ -138,7 +138,7 @@ int forkAndExec( int procID )
 		execProc( procID );
 		/* Process exited. */
 		RAW_LOG( procID2Name( procID ), "W: Unexpected behaviour: Child process returned." );
-		return EXIT_FAILURE;
+		exit( EXIT_FAILURE );
 	}
 
 	/* Updating processesDB. */
